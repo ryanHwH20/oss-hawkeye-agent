@@ -22,7 +22,7 @@ jobs:
           node-version: '18'
 
       - name: Install Hawkeye Agent
-        run: npm install -g hawkeye-agent
+        run: npm install -g oss-hawkeye-agent
 
       - name: Audit New Dependencies
         # Replace this with a script to extract new dependencies from PR diffs

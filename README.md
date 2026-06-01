@@ -2,9 +2,9 @@
 
 **The indisputable, high-precision line-judge for your software supply chain.**
 
-[![NPM Version](https://img.shields.io/npm/v/hawkeye-agent?style=flat-square)](https://www.npmjs.com/package/hawkeye-agent)
-[![License](https://img.shields.io/github/license/ryanHwH20/hawkeye-agent?style=flat-square)](https://github.com/ryanHwH20/hawkeye-agent/blob/main/LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/ryanHwH20/hawkeye-agent/hawkeye.yml?branch=main&style=flat-square)](https://github.com/ryanHwH20/hawkeye-agent/actions)
+[![NPM Version](https://img.shields.io/npm/v/oss-hawkeye-agent?style=flat-square)](https://www.npmjs.com/package/oss-hawkeye-agent)
+[![License](https://img.shields.io/github/license/ryanHwH20/oss-hawkeye-agent?style=flat-square)](https://github.com/ryanHwH20/oss-hawkeye-agent/blob/main/LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/ryanHwH20/oss-hawkeye-agent/hawkeye.yml?branch=main&style=flat-square)](https://github.com/ryanHwH20/oss-hawkeye-agent/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
 In professional tennis, the Hawk-Eye system provides millimeter-accurate, indisputable judgments on whether a ball is in or out. In the modern software supply chain, developers need an equally authoritative system to judge whether an open-source dependency is "safe to use" or "out of bounds."
@@ -29,7 +29,7 @@ When Hawkeye calls a package "OUT", it doesn't just block your build—it provid
 Install Hawkeye Agent globally via NPM:
 
 ```bash
-npm install -g hawkeye-agent
+npm install -g oss-hawkeye-agent
 ```
 
 ### 1. Single Package Audit
@@ -61,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
-      - run: npm install -g hawkeye-agent
+      - run: npm install -g oss-hawkeye-agent
       - run: |
           # Replace with your dynamic package list
           hawkeye NPM express 5.2.1
@@ -85,7 +85,7 @@ If you've installed it globally, you can configure your IDE (e.g. Cursor) to run
   "mcpServers": {
     "hawkeye": {
       "command": "node",
-      "args": ["<path-to-global-node-modules>/hawkeye-agent/dist/server.js"]
+      "args": ["<path-to-global-node-modules>/oss-hawkeye-agent/dist/server.js"]
     }
   }
 }

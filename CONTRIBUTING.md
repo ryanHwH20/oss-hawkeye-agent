@@ -40,8 +40,8 @@ To set up your local development environment:
 
 1. Clone your fork:
    ```bash
-   git clone https://github.com/ryanHwH20/hawkeye-agent.git
-   cd hawkeye-agent
+   git clone https://github.com/ryanHwH20/oss-hawkeye-agent.git
+   cd oss-hawkeye-agent
    ```
 2. Install dependencies:
    ```bash

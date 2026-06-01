@@ -1,17 +1,17 @@
 {
-  "name": "hawkeye-agent",
+  "name": "oss-hawkeye-agent",
   "version": "1.0.0",
   "description": "Context-Aware Security Guardrail for Developers",
   "author": "ryanHwH20",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ryanHwH20/hawkeye-agent.git"
+    "url": "https://github.com/ryanHwH20/oss-hawkeye-agent.git"
   },
   "bugs": {
-    "url": "https://github.com/ryanHwH20/hawkeye-agent/issues"
+    "url": "https://github.com/ryanHwH20/oss-hawkeye-agent/issues"
   },
-  "homepage": "https://github.com/ryanHwH20/hawkeye-agent#readme",
+  "homepage": "https://github.com/ryanHwH20/oss-hawkeye-agent#readme",
   "main": "dist/server.js",
   "bin": {
     "hawkeye": "./dist/cli.js"
