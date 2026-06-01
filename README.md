@@ -9,48 +9,99 @@
 
 In professional tennis, the Hawk-Eye system provides millimeter-accurate, indisputable judgments on whether a ball is in or out. In the modern software supply chain, developers need an equally authoritative system to judge whether an open-source dependency is "safe to use" or "out of bounds."
 
-**Hawkeye Agent** is an enterprise-grade Context-Aware Security Guardrail. It evaluates open-source packages in milliseconds, giving you a definitive, unquestionable verdict on license compliance, known vulnerabilities, OpenSSF health, and deep transitive dependencies (SBOM). 
+**Hawkeye Agent** is an enterprise-grade, AI-native security guardrail that evaluates open-source packages in milliseconds. It gives you a definitive verdict on license compliance, known vulnerabilities (CVE/CVSS), OpenSSF Scorecard health, and deep transitive dependencies (SBOM).
 
-When Hawkeye calls a package "OUT", it doesn't just block your build—it provides immediate AI-guided automated remediation snippets so you can keep moving.
+When Hawkeye calls a package **"OUT"**, it doesn't just block — it provides immediate, AI-guided automated remediation so you can keep moving.
 
 ---
 
 ## ✨ Features
 
-- **🎾 Millimeter-Accurate Line Calling**: Blocks high-risk vulnerabilities and non-compliant licenses instantly, returning standard exit codes (0/1) for easy CI/CD integration.
-- **🔍 Deep SBOM Transitive Scanning**: Analyzes deep dependency graphs via deps.dev to catch "shadow vulnerabilities" that standard manifest scanners miss.
-- **💡 Automated Remediation**: If a package is blocked, Hawkeye suggests compliant alternatives or generates `overrides` code snippets for you to drop directly into your project.
-- **🤖 MCP Protocol Native**: Seamlessly integrates into Cursor, VSCode, or any LLM agent IDE using the Model Context Protocol (MCP) to provide real-time architectural guardrails.
+- 🎾 **Millimeter-Accurate Line Calling** — Blocks high-risk vulnerabilities and non-compliant licenses instantly, returning standard exit codes (`0`/`1`) for CI/CD integration.
+- 🔍 **Deep SBOM Transitive Scanning** — Analyzes full dependency graphs via [deps.dev](https://deps.dev) to catch "shadow vulnerabilities" that standard manifest scanners miss.
+- 💡 **AI-Powered Remediation** — When a package is blocked, Hawkeye generates upgrade snippets, `overrides` blocks, or delegates to your AI assistant to recommend compliant alternatives dynamically.
+- 🤖 **MCP Protocol Native** — Seamlessly integrates into Cursor, VS Code, or any LLM agent IDE via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), providing real-time architectural guardrails *inside* your conversation.
+- 🌐 **7 Ecosystems** — NPM, PyPI, Cargo, Go, RubyGems, NuGet, Maven — all from a single tool.
+- 🏛️ **Policy-as-Code** — Drop a `.audit-agent.yaml` into your repo to enforce organization-specific compliance rules.
 
 ---
 
-## 🚀 Installation & CLI Usage
+## 🚀 Quick Start
 
-Install Hawkeye Agent globally via NPM:
+### Installation
 
 ```bash
 npm install -g oss-hawkeye-agent
 ```
 
-### 1. Single Package Audit
-Run the `hawkeye` CLI tool to get a full enterprise-grade security report.
+### Single Package Audit
 
-**Syntax:**
-```bash
-hawkeye <ecosystem> <package> <version>
-```
-
-**Examples:**
 ```bash
 hawkeye NPM express 4.16.0
-hawkeye MAVEN org.springframework.boot:spring-boot 3.5.8
 hawkeye PYPI requests 2.31.0
+hawkeye MAVEN org.springframework.boot:spring-boot 3.5.8
 ```
 
-### 2. CI/CD Integration
-Because Hawkeye returns standard exit codes (`0` for pass, `1` for blocked), it fits perfectly into any GitHub Actions or GitLab CI pipeline.
+### Example Output
 
-Drop this into `.github/workflows/hawkeye.yml` to prevent non-compliant packages from entering your repository:
+```
+# Package Audit: express@4.16.0 (NPM)
+
+> ### ❌ BLOCKED — Security Policy Violation
+
+## Quick Reference
+| Category         | Status                          |
+| :---             | :---                            |
+| 📜 License       | ✅ MIT — Compliant              |
+| 🐛 Vulnerabilities | ❌ 2 Vulns (1 High)           |
+| 📊 OpenSSF Scorecard | 🟢 7.5/10                  |
+
+## 🚀 Automated Remediation
+> 💡 Official patches are available. Upgrade to `4.21.2`:
+npm install express@4.21.2
+```
+
+---
+
+## 🤖 MCP (Model Context Protocol) Integration
+
+Hawkeye Agent is built from the ground up as an **MCP server**. By connecting it to an LLM, the AI becomes context-aware of your organization's security posture and can prevent developers from introducing non-compliant packages *before* they are even installed.
+
+### Available MCP Tools
+
+| Tool | Description |
+| :--- | :--- |
+| `inspect_package` ⭐ | Enterprise-grade deep evaluation of a single package |
+| `check_command` | Parse installation commands (`npm install lodash express`) and run batch assessments |
+| `show_policy` | View the active enterprise security baseline |
+
+### Setup
+
+Add this to your IDE's MCP configuration (e.g., `.vscode/mcp.json`):
+
+```json
+{
+  "servers": {
+    "oss-hawkeye-agent": {
+      "command": "node",
+      "args": ["<path-to>/oss-hawkeye-agent/dist/server.js"]
+    }
+  }
+}
+```
+
+Once connected, your AI assistant will automatically audit packages when you:
+- Ask "Is lodash safe?"
+- Paste `npm install express`
+- Ask "Can we use GPL packages?"
+
+---
+
+## ⚙️ CI/CD Integration
+
+Hawkeye returns standard exit codes (`0` = pass, `1` = blocked), making it a drop-in security gate for any pipeline.
+
+### GitHub Actions
 
 ```yaml
 name: Hawkeye Agent Audit
@@ -59,53 +110,97 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
       - run: npm install -g oss-hawkeye-agent
-      - run: |
-          # Replace with your dynamic package list
-          hawkeye NPM express 5.2.1
+      - run: hawkeye NPM express 5.2.1
 ```
 
 ---
 
-## 🤖 MCP (Model Context Protocol) Usage
+## 🏛️ Policy Configuration
 
-Hawkeye Agent is built from the ground up to be an MCP server. By connecting it to an LLM, the LLM becomes context-aware of your organization's security posture and can prevent developers from introducing non-compliant packages *before* they are even typed into the editor.
-
-**Available Tools:**
-- `inspect_package`: Fetch a detailed compliance and security report for a single package.
-- `check_command`: Parse raw commands (like `npm install lodash express`) and run batch security assessments.
-- `show_policy`: View the active enterprise security baseline thresholds.
-
-### Running the MCP Server
-If you've installed it globally, you can configure your IDE (e.g. Cursor) to run:
-```json
-{
-  "mcpServers": {
-    "hawkeye": {
-      "command": "node",
-      "args": ["<path-to-global-node-modules>/oss-hawkeye-agent/dist/server.js"]
-    }
-  }
-}
-```
-
----
-
-## 🏛️ Enterprise Policy Configuration
-
-Hawkeye uses a `.audit-agent.yaml` file in the current working directory to enforce compliance. 
+Hawkeye uses a `.audit-agent.yaml` file in the working directory to enforce compliance. If none is found, it falls back to the built-in `policy.json`.
 
 ```yaml
 policy:
-  organizationName: "Security Team"
+  organizationName: "Your Organization"
   blockedLicenses:
-    - "GPL-1.0-only"
     - "GPL-2.0-only"
     - "GPL-3.0-only"
+    - "AGPL-3.0-only"
+    - "SSPL-1.0"
+    - "BUSL-1.1"
   minScorecardScore: 4.0
   blockVulnerabilities: true
+  blockDeprecated: true
+  exceptionFormUrl: "https://your-org.com/oss-exception-request"
 ```
 
-*Hawkeye Agent: Keeping your codebase strictly within the baseline.*
+---
+
+## 🗺️ Roadmap
+
+We're building Hawkeye Agent into the definitive shift-left security tool for developers. Here's where we're headed:
+
+### ✅ Shipped (v1.0)
+
+- [x] Single package audit across 7 ecosystems (NPM, PyPI, Go, Cargo, Maven, NuGet, RubyGems)
+- [x] Batch command parsing (`npm install lodash express`)
+- [x] License compliance checking with configurable blocklists
+- [x] CVE vulnerability scanning via [OSV.dev](https://osv.dev)
+- [x] OpenSSF Scorecard integration with severity-weighted analysis
+- [x] Deep SBOM transitive dependency scanning
+- [x] MCP server with 3 tools (`inspect_package`, `check_command`, `show_policy`)
+- [x] AI Skill Prompt (`SKILL.md`) with loop prevention and dynamic alternative recommendations
+- [x] Automated remediation snippets (upgrade paths, overrides, AI-guided alternatives)
+- [x] CLI with standard exit codes for CI/CD
+- [x] Policy-as-Code via `.audit-agent.yaml`
+
+### 🔜 Next Up
+
+- [ ] **Publish to NPM** — Enable `npx oss-hawkeye-agent` for instant use
+- [ ] **`--json` and `--sarif` output** — Machine-readable formats for toolchain integration
+- [ ] **Caching layer** — In-memory + disk cache with TTL to avoid redundant API calls
+- [ ] **Comprehensive test suite** — Vitest + mocked API responses for contributor confidence
+
+### 🔮 Future
+
+- [ ] **`hawkeye scan` command** — Auto-detect and audit entire project manifests (`package.json`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`)
+- [ ] **Official GitHub Action** — `uses: ryanHwH20/hawkeye-action@v1` with PR comment bot
+- [ ] **VS Code Extension** — Inline diagnostics and hover tooltips for risky dependencies
+- [ ] **HTML report export** — Beautiful, shareable security reports (like Lighthouse)
+- [ ] **Plugin system** — Custom policy rules (e.g., "block packages with <100 weekly downloads")
+- [ ] **Shared policy registry** — Community-maintained templates (`fintech-strict`, `startup-relaxed`)
+
+> 💡 **Have an idea?** [Open an issue](https://github.com/ryanHwH20/oss-hawkeye-agent/issues) or submit a PR — contributions are welcome!
+
+---
+
+## 🏆 Why Hawkeye?
+
+| Capability | Hawkeye | Snyk | Socket | npm audit | OSV-Scanner |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| License Scanning | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Vulnerability Scanning | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SBOM Analysis | ✅ | ✅ | ✅ | ❌ | ❌ |
+| OpenSSF Scorecard | ✅ | ❌ | ❌ | ❌ | ❌ |
+| AI-Native (MCP) | ✅ ⭐ | ❌ | ❌ | ❌ | ❌ |
+| Policy-as-Code | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Free & Open Source | ✅ | Freemium | Freemium | ✅ | ✅ |
+
+> **Hawkeye's unique advantage:** It's the only open-source security tool that is **MCP-native**, giving LLMs real-time, structured security context about every package a developer touches — right inside the IDE conversation.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## 📄 License
+
+[Apache-2.0](LICENSE)
+
+---
+
+*Hawkeye Agent: The indisputable, high-precision line-judge for your software supply chain.* 🎾

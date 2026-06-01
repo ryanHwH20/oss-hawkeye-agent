@@ -3,7 +3,6 @@ import type {
   Policy,
   DepLicense,
   Violation,
-  Alternative,
   ScorecardOfficialSeverity,
 } from './types.js';
 import { getVersionInfo, getDependencies, getScorecard, depsDevUrl } from './api/deps-dev.js';
@@ -236,27 +235,7 @@ export async function checkPackage(
     });
   }
 
-  // ── Lookup alternatives from policy ──────────────────────────────────────
-  const alternatives: Alternative[] = [];
-  const altDefs = policy.alternatives[packageName] ?? [];
-  // Fetch alternatives in parallel
-  await Promise.all(
-    altDefs.map(async (alt) => {
-      const altInfo = await getVersionInfo(ecosystem, alt.name);
-      if (altInfo) {
-        const altVulns = await queryVulnerabilities(ecosystem, alt.name, altInfo.versionKey.version);
-        alternatives.push({
-          name: alt.name,
-          version: altInfo.versionKey.version,
-          licenses: altInfo.licenses ?? [],
-          advisoryCount: altVulns.length,
-          depsDevUrl: depsDevUrl(ecosystem, alt.name, altInfo.versionKey.version),
-          reason: alt.reason,
-          source: 'policy',
-        });
-      }
-    })
-  );
+
 
   return {
     name: packageName,
@@ -273,7 +252,7 @@ export async function checkPackage(
     depCount: { direct: directDeps.length, indirect: indirectDeps.length },
     depLicenses,
     violations,
-    alternatives,
+
     depsDevUrl: depsDevUrl(ecosystem, packageName, resolvedVersion),
   };
 }

@@ -1,5 +1,5 @@
 {
-  "organizationName": "Cathay Financial Holdings",
+  "organizationName": "OSS-HAWKEYE-AGENT",
   "blockedLicenses": [
     "GPL-2.0",
     "GPL-2.0-only",
@@ -20,15 +20,5 @@
   "blockVulnerabilities": true,
   "blockDeprecated": true,
   "exceptionFormUrl": "https://forms.example.com/oss-exception-request",
-  "alternatives": {
-    "moment": [
-      { "name": "dayjs", "reason": "輕量、API 相容、積極維護" },
-      { "name": "date-fns", "reason": "Tree-shakeable、函式導向" }
-    ],
-    "request": [
-      { "name": "node-fetch", "reason": "輕量、標準 Fetch API" },
-      { "name": "axios", "reason": "功能完整、廣泛使用" }
-    ]
-  },
   "ai": null
 }

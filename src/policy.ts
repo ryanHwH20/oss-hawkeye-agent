@@ -21,7 +21,6 @@ export function loadPolicy(): Policy {
           blockVulnerabilities: data.blockVulnerabilities ?? true,
           blockDeprecated: data.blockDeprecated ?? true,
           exceptionFormUrl: data.exceptionFormUrl ?? '',
-          alternatives: data.alternatives ?? {},
           ai: data.ai ?? null,
         };
       }
@@ -42,7 +41,6 @@ export function loadPolicy(): Policy {
     blockVulnerabilities: data.blockVulnerabilities ?? true,
     blockDeprecated: data.blockDeprecated ?? true,
     exceptionFormUrl: data.exceptionFormUrl ?? '',
-    alternatives: data.alternatives ?? {},
     ai: data.ai ?? null,
   };
 }

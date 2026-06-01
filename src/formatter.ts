@@ -172,15 +172,9 @@ function findingsAndActions(r: CheckResult): string[] {
       // Contextual action for this specific violation
       if (v.type === 'LICENSE') {
         lines.push('**Remediation Strategy:**');
-        if (r.alternatives.length > 0) {
-          lines.push('1. Replace with an approved alternative package:');
-          for (const alt of r.alternatives) {
-            lines.push(`   - [\`${alt.name}\`](${alt.depsDevUrl}) — ${alt.reason}`);
-          }
-        } else {
-          lines.push(`1. [Submit an Exception Request](${policy.exceptionFormUrl}) to justify business needs.`);
-          lines.push('2. Notify the Legal and Security teams to assess license conflict scope.');
-        }
+        lines.push('1. Ask your AI assistant to suggest a compliant alternative package.');
+        lines.push(`2. Or [Submit an Exception Request](${policy.exceptionFormUrl}) to justify business needs.`);
+        lines.push('3. Notify the Legal and Security teams to assess license conflict scope.');
       } else if (v.type === 'VULNERABILITY') {
         const fixableVulns = r.vulnerabilities.filter(x => x.fixedVersions.length > 0);
         const fixVersions = [...new Set(fixableVulns.flatMap(x => x.fixedVersions))].slice(0, 3);
@@ -190,12 +184,7 @@ function findingsAndActions(r: CheckResult): string[] {
           lines.push('2. Update your manifest and reinstall dependencies.');
         } else {
           lines.push(`1. [Submit an Exception Request](${policy.exceptionFormUrl}) and commit to upgrading within 30 days of a patch release.`);
-          lines.push('2. Evaluate the following alternative packages (if any):');
-        }
-        if (r.alternatives.length > 0) {
-          for (const alt of r.alternatives) {
-            lines.push(`   - [\`${alt.name}\`](${alt.depsDevUrl}) — ${alt.reason}`);
-          }
+          lines.push('2. Ask your AI assistant to suggest a secure alternative package.');
         }
       } else {
         lines.push('**Remediation Strategy:**');
@@ -463,22 +452,16 @@ function actionableBlock(r: CheckResult): string[] {
         const upgradeStr = upgrades.minimal === upgrades.latest ? `\`${upgrades.minimal}\`` : `\`${upgrades.minimal}\` (No Breaking Changes) or Latest Stable \`${upgrades.latest}\``;
         message = `> ❌ **BLOCKED (Direct Vulnerability)** — The requested version contains high-risk vulnerabilities.\n> \n> **💡 AI Guidance:** Official patches are available. Upgrade to ${upgradeStr}:`;
       } else {
-        if (r.alternatives.length > 0) {
-          targetName = r.alternatives[0].name;
-          targetVersion = r.alternatives[0].version;
-          safeVersionFound = true;
-          message = `> ❌ **BLOCKED (Unpatched Vulnerability)** — There is currently **no official patch** available for this package!\n> \n> **💡 Remediation:**\n> 1. **Replace Package (Recommended)**: Use a secure alternative such as \`${targetName}\` (see snippet below).\n> 2. **Manual Fix**: If you must use this package, consider creating a manual patch or contributing a PR to the upstream repository.`;
-        } else {
-          return [
-            '## 🚀 Automated Remediation',
-            '',
-            `> ❌ **BLOCKED (Unpatched Vulnerability)** — No official patch available and no default alternatives found.`,
-            `> `,
-            `> **💡 Remediation:**`,
-            `> A safe installation snippet cannot be generated. You must manually analyze the CVEs to determine if source code patching is viable or seek other architectural solutions.`,
-            ''
-          ];
-        }
+        return [
+          '## 🚀 Automated Remediation',
+          '',
+          `> ❌ **BLOCKED (Unpatched Vulnerability)** — There is currently **no official patch** available for this package!`,
+          `> `,
+          `> **💡 Remediation:**`,
+          `> 1. **Replace Package (Recommended)**: Ask your AI assistant to suggest a secure alternative.`,
+          `> 2. **Manual Fix**: If you must use this package, consider creating a manual patch or contributing a PR to the upstream repository.`,
+          ''
+        ];
       }
     } 
     // 情境 3: 影子相依漏洞處理 (Overrides)
@@ -497,22 +480,15 @@ function actionableBlock(r: CheckResult): string[] {
     }
     // 情境 4: 授權問題
     else if (licenseViolations.length > 0) {
-      if (r.alternatives.length > 0) {
-        targetName = r.alternatives[0].name;
-        targetVersion = r.alternatives[0].version;
-        safeVersionFound = true;
-        message = `> ❌ **BLOCKED (License Conflict)** — This package uses a restricted license.\n> \n> **💡 Remediation:** Upgrading does not resolve license conflicts. We recommend switching to a compliant alternative package such as \`${targetName}\`:`;
-      } else {
-        return [
-          '## 🚀 Automated Remediation',
-          '',
-          `> ❌ **BLOCKED (License Conflict)** — This package violates corporate licensing policy and no default alternatives exist.`,
-          `> `,
-          `> **💡 Remediation:**`,
-          `> License issues cannot be patched by upgrading. Please consult the legal team for an exception or find an MIT/Apache-2.0 equivalent.`,
-          ''
-        ];
-      }
+      return [
+        '## 🚀 Automated Remediation',
+        '',
+        `> ❌ **BLOCKED (License Conflict)** — This package violates corporate licensing policy.`,
+        `> `,
+        `> **💡 Remediation:**`,
+        `> License issues cannot be patched by upgrading. Ask your AI assistant to suggest a compliant alternative (e.g., MIT/Apache-2.0).`,
+        ''
+      ];
     }
   }
 

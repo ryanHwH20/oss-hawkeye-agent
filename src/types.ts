@@ -7,13 +7,7 @@ export interface Policy {
   blockVulnerabilities: boolean;
   blockDeprecated: boolean;
   exceptionFormUrl: string;
-  alternatives: Record<string, AlternativeDef[]>;
   ai?: { type: string; model?: string };
-}
-
-export interface AlternativeDef {
-  name: string;
-  reason: string;
 }
 
 export interface OsvVuln {
@@ -56,16 +50,6 @@ export interface Violation {
   fixedVersions?: string[];
 }
 
-export interface Alternative {
-  name: string;
-  version: string;
-  licenses: string[];
-  advisoryCount: number;
-  depsDevUrl: string;
-  reason: string;
-  source: 'policy' | 'ai';
-}
-
 export interface CheckResult {
   name: string;
   version: string;
@@ -81,7 +65,6 @@ export interface CheckResult {
   depCount: { direct: number; indirect: number };
   depLicenses: DepLicense[];
   violations: Violation[];
-  alternatives: Alternative[];
   depsDevUrl: string;
 }
 
