@@ -1,0 +1,33 @@
+name: Hawkeye Agent Audit
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'pom.xml'
+      - 'requirements.txt'
+
+jobs:
+  hawkeye-audit:
+    name: Dependency Compliance Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js (Hawkeye Runtime)
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Hawkeye Agent
+        run: npm install -g hawkeye-agent
+
+      - name: Audit New Dependencies
+        # Replace this with a script to extract new dependencies from PR diffs
+        # and pipe them into Hawkeye Agent for auditing.
+        run: |
+          echo "Running OSS Security Audit..."
+          # You can place your custom .audit-agent.yaml in the repo root
+          hawkeye NPM express 5.2.1

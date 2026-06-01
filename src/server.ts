@@ -7,7 +7,7 @@ import {
 import { loadPolicy } from './policy.js';
 import { checkPackage, checkPackages } from './checker.js';
 import { detectAndParse } from './parser.js';
-import { formatResult, formatCommandVerdict, ossieHeader } from './formatter.js';
+import { formatResult, formatCommandVerdict, hawkeyeHeader } from './formatter.js';
 
 const policy = loadPolicy();
 
@@ -15,11 +15,42 @@ const policy = loadPolicy();
 
 const TOOLS = [
   {
+    // PRD §4 — Primary tool: inspect_package
+    name: 'inspect_package',
+    description: [
+      '【Hawkeye Agent】Enterprise-grade open source security guardrail.',
+      'Evaluates open source package security, health, license compliance, and generates SBOMs.',
+      'Provides indisputable security judgments and automated remediation snippets.',
+      'Invoke this when a user asks if a package is safe, or types npm install / pip install commands.',
+      'Returns: License compliance, CVE vulnerabilities (with CVSS), OpenSSF Scorecard, SBOM, and remediation strategies.',
+    ].join(' '),
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        ecosystem: {
+          type: 'string',
+          description: '套件生態系，例如 npm, pypi, go, cargo, rubygems, nuget, maven',
+          enum: ['NPM', 'PYPI', 'CARGO', 'GO', 'RUBYGEMS', 'NUGET', 'MAVEN'],
+        },
+        package_name: {
+          type: 'string',
+          description: '套件名稱，例如 lodash, requests, serde',
+        },
+        version: {
+          type: 'string',
+          description: '特定版本號，若無則預設為 latest',
+        },
+      },
+      required: ['ecosystem', 'package_name'],
+    },
+  },
+  {
+    // Legacy-compatible alias: check_package (uses `package` param for backward compat)
     name: 'check_package',
     description: [
-      '【Ossie 開源守護大使】查詢套件安全性，並依公司政策評估是否可用。',
-      '回傳：授權、已知漏洞數、OpenSSF Scorecard、政策違規原因、建議替代套件。',
-      '適用生態系統：npm pip cargo go gem nuget maven。',
+      '【Hawkeye Agent】Check a single package (legacy alias, use inspect_package).',
+      'Returns: License, Vulnerabilities, Scorecard, Policy violations, and alternatives.',
+      'Supported ecosystems: npm pip cargo go gem nuget maven.',
     ].join(' '),
     inputSchema: {
       type: 'object' as const,
@@ -44,9 +75,9 @@ const TOOLS = [
   {
     name: 'check_command',
     description: [
-      '解析一段套件安裝指令，查詢所有涉及套件的安全性與政策合規性。',
-      '支援：npm install、pip install、cargo add、go get、gem install、dotnet add、mvn dependency:get。',
-      '例如輸入 npm install lodash express 或 pip install requests flask。',
+      'Parses an installation command and performs a batch compliance scan on all mentioned packages.',
+      'Supports: npm install, pip install, cargo add, go get, gem install, dotnet add, mvn dependency:get.',
+      'Example: npm install lodash express OR pip install requests flask.',
     ].join(' '),
     inputSchema: {
       type: 'object' as const,
@@ -61,7 +92,7 @@ const TOOLS = [
   },
   {
     name: 'show_policy',
-    description: '顯示目前公司套件使用政策（授權黑名單、Scorecard 門檻、漏洞規則等）。',
+    description: 'Show current enterprise open-source compliance policy (blocked licenses, Scorecard thresholds, vulnerability rules).',
     inputSchema: {
       type: 'object' as const,
       properties: {},
@@ -72,7 +103,7 @@ const TOOLS = [
 // ─── MCP Server ──────────────────────────────────────────────────────────────
 
 const server = new Server(
-  { name: 'cathayossguard', version: '1.0.0' },
+  { name: 'hawkeye-agent', version: '2.0.0' },
   { capabilities: { tools: {} } }
 );
 
@@ -82,43 +113,62 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
+    // ── show_policy ──────────────────────────────────────────────────────────
     if (name === 'show_policy') {
       const lines = [
-        ossieHeader(),
-        '## Open Source Package Policy',
+        hawkeyeHeader(),
+        '## 🏛️ Open Source Package Policy',
         '',
-        '> 以下為公司現行開源套件合規政策，所有套件引入前均須通過本政策審查。',
+        '> The following is the current corporate open-source package compliance policy. All packages must pass this policy review before being introduced.',
         '',
         '| Policy Rule | Configuration |',
-        '|-------------|---------------|',
-        `| Organization | ${policy.organizationName} |`,
-        `| Blocked Licenses | \`${policy.blockedLicenses.join('`, `')}\` |`,
-        `| OpenSSF Scorecard Threshold | \`${policy.minScorecardScore}/10\` |`,
-        `| Known Vulnerabilities | ${policy.blockVulnerabilities ? '⛔ Blocked' : '✅ Allowed'} |`,
-        `| Deprecated Packages | ${policy.blockDeprecated ? '⛔ Blocked' : '✅ Allowed'} |`,
+        '| :--- | :--- |',
+        `| 🏢 Organization | ${policy.organizationName} |`,
+        `| ⛔ Blocked Licenses | \`${policy.blockedLicenses.join('`, `')}\` |`,
+        `| 📊 OpenSSF Scorecard Threshold | \`${policy.minScorecardScore}/10\` |`,
+        `| 🛡️ Known Vulnerabilities | ${policy.blockVulnerabilities ? '⛔ Blocked' : '✅ Allowed'} |`,
+        `| 🗑️ Deprecated Packages | ${policy.blockDeprecated ? '⛔ Blocked' : '✅ Allowed'} |`,
         '',
-        `**Exception Request Form:** ${policy.exceptionFormUrl}`,
+        `**例外申請表單 (Exception Request Form):** ${policy.exceptionFormUrl}`,
+        '',
+        '> "Hawkeye Agent: The indisputable, high-precision line-judge for your software supply chain."',
       ];
       return { content: [{ type: 'text', text: lines.join('\n') }] };
     }
 
-    if (name === 'check_package') {
+    // ── inspect_package (PRD primary tool) ───────────────────────────────────
+    if (name === 'inspect_package') {
       const ecosystem = ((args?.ecosystem as string) ?? '').toUpperCase();
-      const pkg = args?.package as string;
+      const pkg = args?.package_name as string;
       const version = (args?.version as string) || undefined;
 
       if (!ecosystem || !pkg) {
-        return { content: [{ type: 'text', text: '錯誤：請提供 ecosystem 和 package 參數。' }] };
+        return { content: [{ type: 'text', text: 'Error: ecosystem and package_name parameters are required.' }] };
       }
 
       const result = await checkPackage(ecosystem, pkg, version, policy);
       return { content: [{ type: 'text', text: formatResult(result) }] };
     }
 
+    // ── check_package (backward-compatible alias) ────────────────────────────
+    if (name === 'check_package') {
+      const ecosystem = ((args?.ecosystem as string) ?? '').toUpperCase();
+      const pkg = args?.package as string;
+      const version = (args?.version as string) || undefined;
+
+      if (!ecosystem || !pkg) {
+        return { content: [{ type: 'text', text: 'Error: ecosystem and package parameters are required.' }] };
+      }
+
+      const result = await checkPackage(ecosystem, pkg, version, policy);
+      return { content: [{ type: 'text', text: formatResult(result) }] };
+    }
+
+    // ── check_command ────────────────────────────────────────────────────────
     if (name === 'check_command') {
       const command = args?.command as string;
       if (!command) {
-        return { content: [{ type: 'text', text: '錯誤：請提供 command 參數。' }] };
+        return { content: [{ type: 'text', text: 'Error: command parameter is required.' }] };
       }
 
       const tokens = command.trim().split(/\s+/);
@@ -130,14 +180,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: 'text',
               text: [
-                ossieHeader(),
-                '> ⚠️ Ossie 無法解析此安裝指令，請確認格式後重新提交。',
+                hawkeyeHeader(),
+                '> ⚠️ Hawkeye Agent could not parse this installation command. Please verify the format and try again.',
                 '',
-                `指令：\`${command}\``,
+                `Command: \`${command}\``,
                 '',
-                '支援格式：',
-                '| 生態系統 | 範例指令 |',
-                '|----------|----------|',
+                '**Supported Formats:**',
+                '| Ecosystem | Example Command |',
+                '| :--- | :--- |',
                 '| npm | `npm install package` |',
                 '| pip | `pip install package` |',
                 '| cargo | `cargo add package` |',
@@ -161,10 +211,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const results = await checkPackages(toCheck, policy);
 
       const text = [
-        ossieHeader(),
-        '## 批次合規審查',
+        hawkeyeHeader(),
+        '## 📦 Batch Compliance Scan',
         '',
-        `指令： \`${command}\``,
+        `**Command:** \`${command}\``,
         '',
         formatCommandVerdict(results),
         '',
@@ -175,17 +225,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: 'text', text }] };
     }
 
-    return { content: [{ type: 'text', text: `未知工具：${name}` }] };
+    return { content: [{ type: 'text', text: `Unknown tool: ${name}` }] };
   } catch (err) {
     return {
       content: [
         {
           type: 'text',
           text: [
-            ossieHeader(),
-            '> ⚠️ Ossie 查詢過程中發生錯誤，可能為網路異常或 API 服務中斷。',
+            hawkeyeHeader(),
+            '> ⚠️ An error occurred during the query. This may be a network issue or API service outage.',
             '',
-            `錯誤詳情：\`${String(err)}\``,
+            `Error Details: \`${String(err)}\``,
           ].join('\n'),
         },
       ],
@@ -199,7 +249,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  process.stderr.write('CathayOSSGuard MCP Server (Ossie) started\n');
+  process.stderr.write('Hawkeye Agent MCP Server started\n');
 }
 
 main().catch((err) => {

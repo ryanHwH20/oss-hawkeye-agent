@@ -1,317 +1,609 @@
-import type { CheckResult, Policy, OsvVuln } from './types.js';
+import type { CheckResult, OsvVuln, ScorecardOfficialSeverity } from './types.js';
 import { loadPolicy } from './policy.js';
 
 const policy = loadPolicy();
 
-// ─── Ossie Header ────────────────────────────────────────────────────────────
+// ─── Exported header (used by server.ts for error/batch frames) ───────────────
 
-function ossieHeader(): string {
-  const ts = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
-  return [
-    '# 🛡️ CathayOSSGuard',
-    'Open Source Compliance Report · Powered by Ossie',
-    '',
-    '> Ossie 是國泰的開源合規守護大使，在每個套件進入程式碼庫前，',
-    '> 進行授權風險、資安態勢與公司政策的全面評估。',
-    '',
-    `\`Scanned at ${ts} (UTC+8)\``,
-    '',
-    '---',
-    '',
-  ].join('\n');
+export function hawkeyeHeader(): string {
+  const ts = new Date().toLocaleString('en-US', { timeZone: 'UTC', hour12: false });
+  return `**Hawkeye Agent** · \`${ts} UTC\`\n\n`;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Score / Status Helpers ───────────────────────────────────────────────────
 
-function scorecardBadge(score: number): string {
-  if (score >= 7) return `\`${score.toFixed(1)}/10\` 🟢`;
-  if (score >= 4) return `\`${score.toFixed(1)}/10\` 🟡`;
-  return `\`${score.toFixed(1)}/10\` 🔴`;
+function scoreLight(score: number): string {
+  if (score < 0) return '—';
+  if (score >= 7) return `🟢 ${score}/10`;
+  if (score >= 4) return `🟡 ${score}/10`;
+  return `🔴 ${score}/10`;
 }
 
-function severityBadge(s: OsvVuln['severity']): string {
+function severityLabel(s: OsvVuln['severity']): string {
   switch (s) {
-    case 'CRITICAL': return '🔴 CRITICAL';
-    case 'HIGH':     return '🟠 HIGH';
-    case 'MEDIUM':   return '🟡 MEDIUM';
-    case 'LOW':      return '🔵 LOW';
-    default:         return '⚪ UNKNOWN';
+    case 'CRITICAL': return '🔴 Critical';
+    case 'HIGH':     return '🔴 High';
+    case 'MEDIUM':   return '🟡 Medium';
+    case 'LOW':      return '🔵 Low';
+    default:         return 'Unknown';
   }
 }
 
-function depsDevUrl(system: string, name: string, version?: string): string {
-  const base = `https://deps.dev/${system.toLowerCase()}/${encodeURIComponent(name)}`;
-  return version ? `${base}/${encodeURIComponent(version)}` : base;
+function officialSev(s: ScorecardOfficialSeverity): string {
+  switch (s) {
+    case 'Critical': return '🔴 Critical';
+    case 'High':   return '🔴 High';
+    case 'Medium': return '🟡 Medium';
+    case 'Low':    return '🟢 Low';
+    default:       return '—';
+  }
 }
 
-// ─── Ossie Verdict ───────────────────────────────────────────────────────────
+// ─── Section: Verdict Banner ──────────────────────────────────────────────────
 
-function ossieVerdict(r: CheckResult): string {
-  const warn = r.violations.filter((v) => v.severity === 'HIGH' || v.severity === 'MEDIUM');
+function verdictBanner(r: CheckResult): string[] {
+  const hasBlock = r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
+  const hasAdvisory = r.violations.some(v => v.severity === 'LOW');
 
-  if (warn.length > 0) {
-    const vulnWarn = warn.filter((v) => v.type === 'VULNERABILITY');
-    const licWarn = warn.filter((v) => v.type === 'LICENSE' || v.type === 'SBOM_LICENSE');
-    const parts: string[] = [];
-    if (vulnWarn.length > 0) parts.push(`${vulnWarn.length} 項已知漏洞風險`);
-    if (licWarn.length > 0) parts.push(`${licWarn.length} 項授權違規`);
-    const note = parts.length > 0 ? parts.join('、') : `${warn.length} 項政策違規`;
+  const verdict = hasBlock
+    ? '❌  BLOCKED — Security Policy Violation'
+    : hasAdvisory
+      ? '✅  APPROVED — With Advisories'
+      : '✅  APPROVED — Fully Compliant';
+
+  const today = new Date().toLocaleDateString('en-US');
+
+  return [
+    `# Package Audit: \`${r.name}@${r.version}\` (${r.system})`,
+    '',
+    `> ### ${verdict}`,
+    '',
+    `Policy: **${policy.organizationName} · Security Baseline** | Date: \`${today}\``,
+    '',
+    '---',
+    '',
+  ];
+}
+
+// ─── Section: Version Warning ───────────────────────────────────────────────────
+
+function versionWarning(r: CheckResult): string[] {
+  const preReleaseRegex = /[.-](alpha|beta|rc|m\d+|milestone|dev|snapshot|preview|next)(?:\d+)?$/i;
+  const match = r.version.match(preReleaseRegex);
+  if (!match) return [];
+
+  const type = match[1].toUpperCase();
+  return [
+    `> [!WARNING]`,
+    `> **Pre-release Version:** The requested version \`${r.version}\` is a ${type} pre-release. It is highly recommended to use a stable GA release for production environments.`,
+    '',
+  ];
+}
+
+// ─── Section: Quick Reference (TL;DR Table) ───────────────────────────────────
+
+function quickReference(r: CheckResult): string[] {
+  const hasBlock = r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
+
+  const licStatus = r.rootFlaggedLicenses.length > 0
+    ? `❌ Blocked (\`${r.rootFlaggedLicenses.join(', ')}\`)`
+    : `✅ \`${r.licenses.join(', ') || 'Unknown'}\` — Compliant`;
+
+  const vulnStatus = r.vulnerabilities.length === 0
+    ? '✅ No Known Vulnerabilities'
+    : `❌ ${r.vulnerabilities.length} Vulns (${r.vulnerabilities.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH').length} High/Critical)`;
+
+  const scoreNum = r.scorecardScore;
+  const scoreStatus = scoreNum === null
+    ? '⚪ N/A'
+    : scoreNum >= 7
+      ? `🟢 ${scoreNum.toFixed(1)}/10`
+      : scoreNum >= 4
+        ? `🟡 ${scoreNum.toFixed(1)}/10 — Advisory`
+        : `🔴 ${scoreNum.toFixed(1)}/10 — Below Threshold`;
+
+  const policyStatus = hasBlock
+    ? `❌ ${r.violations.filter(v => v.severity === 'HIGH').length} Blocking Issues`
+    : r.violations.filter(v => v.severity === 'LOW').length > 0
+      ? `⚠️ ${r.violations.filter(v => v.severity === 'LOW').length} Advisories`
+      : '✅ Compliant';
+
+  return [
+    '## Quick Reference',
+    '',
+    '| Category | Status |',
+    '| :--- | :--- |',
+    `| 📜 License | ${licStatus} |`,
+    `| 🐛 Vulnerabilities | ${vulnStatus} |`,
+    `| 📊 OpenSSF Scorecard | ${scoreStatus} |`,
+    `| 🏛️ Policy | ${policyStatus} |`,
+    '',
+    '---',
+    '',
+  ];
+}
+
+// ─── Section: Findings & Actions (核心用戶指引) ───────────────────────────────
+
+function findingsAndActions(r: CheckResult): string[] {
+  const blocking = r.violations.filter(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
+  const advisory = r.violations.filter(v => v.severity === 'LOW');
+
+  if (blocking.length === 0 && advisory.length === 0) {
     return [
+      '## 🚨 Blocking Issues & Remediation',
+      '',
+      '✅ All checks passed. No actions required.',
       '',
       '---',
-      `### Ossie's Compliance Decision`,
-      `> ⚠️ WARN — Exception Required — 本套件存在 ${note}，使用前須完成例外申請並取得 OSRB 團隊核准。`,
-      `> ① [填寫例外申請表單 ↗](${policy.exceptionFormUrl})　② 通知 OSRB 團隊說明影響範圍　③ 訂立升級時程承諾`,
-      '---',
-    ].join('\n');
+      '',
+    ];
   }
 
-  return [
+  const lines: string[] = [
+    '## 🚨 Blocking Issues & Remediation',
     '',
-    '---',
-    `### Ossie's Compliance Decision`,
-    `> ✅ APPROVED — 本套件通過所有合規審查，授權與安全指標均符合公司政策，可正常引入。`,
-    '---',
-  ].join('\n');
-}
+  ];
 
-// ─── Vulnerability Section ───────────────────────────────────────────────────
-
-function formatVulnerabilitiesSection(r: CheckResult): string[] {
-  if (r.vulnerabilities.length === 0) return [];
-  const lines: string[] = [];
-
-  lines.push('### Known Vulnerabilities');
-  lines.push('');
-  lines.push('> 掃描引擎： [osv.dev API ↗](https://osv.dev) · 涵蓋 OSV、GitHub Advisory Database、NVD 等多個資料庫。');
-  lines.push('');
-  lines.push('| Package | ID | Severity | Aliases | Summary | Fixed In |');
-  lines.push('|---------|----|---------:|---------|---------|----------|');
-
-  for (const v of r.vulnerabilities) {
-    const cveIds = v.aliases.filter(a => a.startsWith('CVE-') || a.startsWith('GHSA-'));
-    const cveStr = cveIds.length > 0
-      ? cveIds.map(id => `[\`${id}\`](https://osv.dev/vulnerability/${id})`).join(', ')
-      : '—';
-    const fixedStr = v.fixedVersions.length > 0
-      ? v.fixedVersions.map(f => `\`${f}\``).join(', ')
-      : '⚠️ 尚無修復版本';
-    lines.push(`| \`${r.name}\` | [${v.id}](${v.url}) | ${severityBadge(v.severity)} | ${cveStr} | ${v.summary} | ${fixedStr} |`);
-  }
-  lines.push('');
-  return lines;
-}
-
-// ─── Action Plan ─────────────────────────────────────────────────────────────
-
-function formatActionPlan(r: CheckResult): string[] {
-  const blocking = r.violations.filter((v) => v.severity === 'HIGH' || v.severity === 'MEDIUM');
-  if (blocking.length === 0) return [];
-
-  const lines: string[] = [];
-  lines.push('### 🎯 Developer Action Plan');
-  lines.push('');
-  lines.push('> 本套件被攔截。請依以下選項評估處置方式：');
-  lines.push('');
-
-  // Option A — upgrade
-  const fixableVulns = r.vulnerabilities.filter(
-    v => (v.severity === 'CRITICAL' || v.severity === 'HIGH' || v.severity === 'MEDIUM') && v.fixedVersions.length > 0
-  );
-  if (fixableVulns.length > 0) {
-    const fixVersions = [...new Set(fixableVulns.flatMap(v => v.fixedVersions))].slice(0, 3);
-    lines.push('**Option A — ⬆️ 升級至修復版本（最快 · 無需例外申請）**');
+  // ── Blocking Findings ──
+  if (blocking.length > 0) {
+    lines.push('### ⛔ Blocking Issues — Action Required');
     lines.push('');
-    lines.push(`已知修復版本：${fixVersions.map(v => `\`${v}\``).join('、')} — 升級後重新掃描即可通過。`);
+    lines.push('> The following issues prevent this package from being used. Do not install until resolved or an exception is approved by the Security Team.');
     lines.push('');
-  }
 
-  // Option B — replace
-  if (r.alternatives.length > 0) {
-    lines.push('**Option B — 🔄 替換套件（見下方 Recommended Alternatives）**');
-    lines.push('');
-    lines.push(`已找到 ${r.alternatives.length} 個通過合規審查的替代套件，評估後可直接替換。`);
-    lines.push('');
+    for (const v of blocking) {
+      const icon = v.severity === 'HIGH' ? '🔴' : '🟡';
+      lines.push(`#### ${icon} ${v.reason}`);
+      lines.push('');
+      if (v.details.length > 0) {
+        lines.push(`**Affected:** \`${v.details.join('`, `')}\``);
+        lines.push('');
+      }
+      lines.push(`**Risk:** ${v.riskExplanation}`);
+      lines.push('');
+      
+      if (v.path && v.path.length > 0) {
+        lines.push(`**Dependency Topology Path:**`);
+        lines.push(`\`${r.name}@${r.version}\` ➡️ \`${v.path.join('` ➡️ `')}\``);
+        lines.push('');
+      }
+
+      // Contextual action for this specific violation
+      if (v.type === 'LICENSE') {
+        lines.push('**Remediation Strategy:**');
+        if (r.alternatives.length > 0) {
+          lines.push('1. Replace with an approved alternative package:');
+          for (const alt of r.alternatives) {
+            lines.push(`   - [\`${alt.name}\`](${alt.depsDevUrl}) — ${alt.reason}`);
+          }
+        } else {
+          lines.push(`1. [Submit an Exception Request](${policy.exceptionFormUrl}) to justify business needs.`);
+          lines.push('2. Notify the Legal and Security teams to assess license conflict scope.');
+        }
+      } else if (v.type === 'VULNERABILITY') {
+        const fixableVulns = r.vulnerabilities.filter(x => x.fixedVersions.length > 0);
+        const fixVersions = [...new Set(fixableVulns.flatMap(x => x.fixedVersions))].slice(0, 3);
+        lines.push('**Remediation Strategy:**');
+        if (fixVersions.length > 0) {
+          lines.push(`1. Upgrade to a patched version: ${fixVersions.map(v => `\`${v}\``).join(', ')}`);
+          lines.push('2. Update your manifest and reinstall dependencies.');
+        } else {
+          lines.push(`1. [Submit an Exception Request](${policy.exceptionFormUrl}) and commit to upgrading within 30 days of a patch release.`);
+          lines.push('2. Evaluate the following alternative packages (if any):');
+        }
+        if (r.alternatives.length > 0) {
+          for (const alt of r.alternatives) {
+            lines.push(`   - [\`${alt.name}\`](${alt.depsDevUrl}) — ${alt.reason}`);
+          }
+        }
+      } else {
+        lines.push('**Remediation Strategy:**');
+        lines.push(`1. [Submit an Exception Request](${policy.exceptionFormUrl})`);
+        lines.push('2. Contact the Security team to discuss the use case.');
+      }
+      lines.push('');
+    }
   }
 
-  // Option C — exception
-  lines.push('**Option C — 📋 申請例外使用（需 OSRB 團隊核准）**');
-  lines.push('');
-  lines.push(`1. [📋 填寫例外申請表單 ↗](${policy.exceptionFormUrl})`);
-  lines.push('2. 📢 通知 OSRB 團隊說明業務需求及影響範圍');
-  lines.push('3. 🗓️ 承諾在修復版本釋出後 30 天內完成升級');
-  lines.push('');
+  // ── Advisory Findings ──
+  if (advisory.length > 0) {
+    lines.push('### 💡 Advisory — Recommendations (Non-Blocking)');
+    lines.push('');
+    for (const v of advisory) {
+      lines.push(`#### 🔵 ${v.reason}`);
+      lines.push('');
+      if (v.details.length > 0) {
+        lines.push(`**Note:** \`${v.details.join('`, `')}\``);
+        lines.push('');
+      }
+      lines.push(`**Explanation:** ${v.riskExplanation}`);
+      lines.push('');
+    }
+  }
+
   lines.push('---');
   lines.push('');
+
   return lines;
 }
 
-// ─── Main Format Function ────────────────────────────────────────────────────
+// ─── Section: License ─────────────────────────────────────────────────────────
 
-export function formatResult(r: CheckResult): string {
-  const lines: string[] = [];
+function licenseSection(r: CheckResult): string[] {
+  const declared = r.licenses.length > 0 ? r.licenses.join(', ') : 'Unknown';
+  const status = r.rootFlaggedLicenses.length > 0
+    ? `❌ \`${r.rootFlaggedLicenses.join(', ')}\` — Policy Violation`
+    : `✅ \`${declared}\` — Approved`;
 
-  lines.push(ossieHeader());
+  const lines = [
+    '## 📜 License',
+    '',
+    `* **Declared:** \`${declared}\``,
+    `* **Status:** ${status}`,
+    '',
+  ];
 
-  // Package Identity
-  const complianceStatus = r.violations.some((v) => v.severity === 'HIGH' || v.severity === 'MEDIUM')
-    ? '⚠️ WARN — Exception Required'
-    : '✅ APPROVED';
-  lines.push(`## \`${r.name}@${r.version}\`  ·  ${r.system}`);
-  lines.push('');
-  lines.push(`**Compliance Status:** ${complianceStatus}`);
-  lines.push('');
-
-  // Action Plan
-  lines.push(...formatActionPlan(r));
-
-  // Security Overview
-  lines.push('### Security Overview');
-  lines.push('');
-  lines.push('| Field | Value | 說明 |');
-  lines.push('|-------|-------|------|');
-
-  const licenseVal = r.licenses.length > 0 ? r.licenses.join(', ') : 'Unknown';
-  const licenseFlag = r.rootFlaggedLicenses.length > 0 ? ' ⚠️' : '';
-  lines.push(`| License | \`${licenseVal}\`${licenseFlag} | 套件宣告的 SPDX 授權識別碼 |`);
-
-  const vulnVal = r.advisoryCount === 0 ? '✅ None' : `⚠️ ${r.advisoryCount} vulnerability(ies)`;
-  lines.push(`| Known Vulnerabilities | ${vulnVal} | 來自 osv.dev API |`);
-
-  lines.push(`| OpenSSF Scorecard | ${r.scorecardScore !== null ? scorecardBadge(r.scorecardScore) : '\`N/A\`'} | 開源安全評分 |`);
-  lines.push(`| Direct Dependencies | ${r.depCount.direct} | 第一層依賴數量 |`);
-  lines.push(`| Transitive Dependencies | ${r.depCount.indirect} | 間接依賴總數 |`);
-  lines.push(`| Source | [deps.dev ↗](${r.depsDevUrl}) | 資料來源 |`);
-  lines.push('');
-
-  // Vulnerabilities
-  lines.push(...formatVulnerabilitiesSection(r));
-
-  // Scorecard Details
-  if (r.scorecardChecks.length > 0) {
-    lines.push('### OpenSSF Scorecard Details');
-    lines.push('');
-    lines.push(`> 評分日期：${r.scorecardDate ?? 'N/A'} · 總分：${r.scorecardScore !== null ? scorecardBadge(r.scorecardScore) : 'N/A'} · 門檻：\`${policy.minScorecardScore}/10\``);
-    lines.push('');
-    lines.push('| Check | Score | 說明 |');
-    lines.push('|-------|------:|------|');
-    for (const check of r.scorecardChecks) {
-      const icon = check.score >= 7 ? '🟢' : check.score >= 4 ? '🟡' : '🔴';
-      lines.push(`| ${check.name} | ${icon} ${check.score}/10 | ${check.documentation.shortDescription} |`);
-    }
-    lines.push('');
+  if (r.rootFlaggedLicenses.length === 0) {
+    lines.push('No viral copyleft risks detected. Safe for proprietary commercial use.');
   }
+  lines.push('');
 
-  // SBOM
-  if (r.depLicenses.length > 0) {
-    lines.push('### Software Bill of Materials (SBOM)');
-    lines.push('');
-    const flaggedCount = r.depLicenses.filter(d => d.flagged.length > 0).length;
-    lines.push(flaggedCount === 0
-      ? `全部依賴套件均通過授權篩查，無受限授權。`
-      : `⚠️ 共 ${flaggedCount} 個依賴含受限授權。`);
-    lines.push('');
-    lines.push('| Package | Version | Scope | License | Status |');
-    lines.push('|---------|---------|-------|---------|--------|');
-
-    const rootLic = r.licenses.length > 0 ? r.licenses.join(', ') : 'Unknown';
-    const rootFlag = r.rootFlaggedLicenses.length > 0;
-    lines.push(`| [${r.name}](${r.depsDevUrl}) | \`${r.version}\` | root | \`${rootLic}\` | ${rootFlag ? '⚠️ Restricted' : '✅ Clear'} |`);
-
-    for (const dep of r.depLicenses.slice(0, 30)) { // cap at 30 to avoid huge output
-      const lic = dep.licenses.length > 0 ? dep.licenses.join(', ') : 'Unknown';
-      const flag = dep.flagged.length > 0;
-      const scope = dep.relation === 'DIRECT' ? 'direct' : 'transitive';
-      const depUrl = depsDevUrl(r.system, dep.name, dep.version);
-      lines.push(`| [${dep.name}](${depUrl}) | \`${dep.version}\` | ${scope} | \`${lic}\` | ${flag ? `⚠️ \`${dep.flagged.join(', ')}\`` : '✅ Clear'} |`);
-    }
-    lines.push('');
-  }
-
-  // Policy Findings
-  const blocking = r.violations.filter((v) => v.severity === 'HIGH');
-  const needsException = r.violations.filter((v) => v.severity === 'MEDIUM');
-  const advisory = r.violations.filter((v) => v.severity === 'LOW');
-
-  if (r.violations.length === 0) {
-    lines.push('### Policy Findings');
-    lines.push('');
-    lines.push('未偵測到任何政策違規。授權與資安審查均通過。');
-    lines.push('');
-  } else {
-    if (blocking.length > 0 || needsException.length > 0) {
-      lines.push('### Policy Findings — ⚠️ Exception Required');
-      lines.push('');
-      for (const v of blocking) {
-        lines.push(`#### 🔴 HIGH · ${v.reason}`);
-        lines.push('');
-        if (v.details.length > 0) lines.push(`**Finding:** \`${v.details.join(', ')}\``);
-        lines.push('');
-        lines.push(`> 風險說明： ${v.riskExplanation}`);
-        if (v.affectedDep) lines.push(`> Affected dependency: \`${v.affectedDep}\``);
-        lines.push('');
-      }
-      for (const v of needsException) {
-        lines.push(`#### 🟠 MEDIUM · ${v.reason}`);
-        lines.push('');
-        if (v.details.length > 0) {
-          lines.push(`**Finding:** \`${v.details.join(', ')}\``);
-          lines.push('');
-        }
-        lines.push(`> 風險說明： ${v.riskExplanation}`);
-        if (v.affectedDep) lines.push(`> Affected dependency: \`${v.affectedDep}\``);
-        lines.push('');
-      }
-    }
-
-    if (advisory.length > 0) {
-      lines.push('### Advisory Findings _(informational only, not blocking)_');
-      lines.push('');
-      for (const v of advisory) {
-        lines.push(`- ⚪ ${v.reason}: ${v.details.join(', ')}`);
-      }
-      lines.push('');
-    }
-
-    // Alternatives
-    if (r.alternatives.length > 0) {
-      lines.push('### Recommended Alternatives');
-      lines.push('');
-      lines.push('| Package | Version | License | Vulnerabilities | 推薦原因 |');
-      lines.push('|---------|---------|---------|-----------------|----------|');
-      for (const alt of r.alternatives) {
-        const lic = alt.licenses.length > 0 ? alt.licenses.join(', ') : 'Unknown';
-        lines.push(`| [${alt.name}](${alt.depsDevUrl}) | \`${alt.version}\` | \`${lic}\` | ${alt.advisoryCount === 0 ? '✅ None' : alt.advisoryCount} | ${alt.reason} |`);
-      }
-      lines.push('');
-    }
-  }
-
-  lines.push(ossieVerdict(r));
-  return lines.join('\n');
+  return lines;
 }
 
-// ─── Batch Command Verdict ───────────────────────────────────────────────────
+// ─── Section: Vulnerabilities ────────────────────────────────────────────────
 
-export function formatCommandVerdict(results: CheckResult[]): string {
-  const failCount = results.filter((r) =>
-    r.violations.some((v) => v.severity === 'HIGH' || v.severity === 'MEDIUM')
-  ).length;
-  const passCount = results.length - failCount;
-
-  const verdict = failCount > 0
-    ? `> ⚠️ WARN — 共 ${failCount} 個套件需要申請例外，使用前須取得 OSRB 團隊核准。`
-    : `> ✅ APPROVED — 全部 ${results.length} 個套件均通過合規審查，可安心安裝。`;
-
-  return [
-    '| Result | Count |',
-    '|--------|------:|',
-    `| Total packages scanned | ${results.length} |`,
-    `| ✅ Approved | ${passCount} |`,
-    `| ⚠️ Warn — Exception Required | ${failCount} |`,
+function vulnerabilitySection(r: CheckResult): string[] {
+  const lines: string[] = [
+    '## 🐛 Vulnerabilities',
+    '_Source: osv.dev_',
     '',
-    verdict,
+  ];
+
+  if (r.vulnerabilities.length === 0) {
+    lines.push('✅ No known vulnerabilities detected for this version.');
+    lines.push('');
+    return lines;
+  }
+
+  for (const v of r.vulnerabilities) {
+    const cve = v.aliases.find(a => a.startsWith('CVE-'));
+    const ghsa = v.aliases.find(a => a.startsWith('GHSA-'));
+    const titleId = cve ?? ghsa ?? v.id;
+    const altId = (cve && ghsa) ? ` · \`${ghsa}\`` : '';
+    const fixedStr = v.fixedVersions.length > 0
+      ? v.fixedVersions.map(f => `\`${f}\``).join(', ')
+      : '⚠️ No patch available';
+    const cvssStr = v.cvssScore !== null
+      ? `${severityLabel(v.severity)} · CVSS ${v.cvssScore.toFixed(1)}`
+      : severityLabel(v.severity);
+
+    lines.push(`* **\`${titleId}\`**${altId}`);
+    lines.push(`  * Severity: ${cvssStr}`);
+    lines.push(`  * Fix: ${fixedStr}`);
+    lines.push(`  * Summary: ${v.summary}`);
+    lines.push(`  * Ref: [osv.dev/vulnerability/${v.id}](https://osv.dev/vulnerability/${v.id})`);
+    lines.push('');
+  }
+
+  return lines;
+}
+
+// ─── Section: OpenSSF Scorecard ───────────────────────────────────────────────
+
+function scorecardSection(r: CheckResult): string[] {
+  const scoreStr = r.scorecardScore !== null ? `${scoreLight(r.scorecardScore)}` : '⚪ 無資料';
+
+  const lines: string[] = [
+    `## 📊 OpenSSF Scorecard (${scoreStr})`,
+    '_Source: api.securityscorecards.dev_',
+    '',
+  ];
+
+  if (r.scorecardChecks.length === 0) {
+    lines.push('ℹ️ This package is not tracked by OpenSSF Scorecard (likely not hosted on GitHub).');
+    lines.push('');
+    return lines;
+  }
+
+  lines.push('<details>');
+  lines.push('<summary>▶ Expand Detailed Scorecard Metrics</summary>');
+  lines.push('');
+  lines.push('> 💡 **Ecosystem Context:**');
+  lines.push('> Large projects (e.g. Spring Boot, React) may score 0 in metrics like `Code-Review` if they use custom CI/CD or internal workflows instead of GitHub branch protections. This is common for enterprise repositories and can often be safely ignored.');
+  lines.push('');
+  lines.push('| Metric | Severity | Score |');
+  lines.push('| :--- | :--- | :--- |');
+
+  const sevWeight = (s: string) => {
+    switch (s) {
+      case 'Critical': return 4;
+      case 'High':     return 3;
+      case 'Medium':   return 2;
+      case 'Low':      return 1;
+      default:         return 0;
+    }
+  };
+
+  const sortedChecks = [...r.scorecardChecks].sort((a, b) => {
+    return sevWeight(b.officialSeverity) - sevWeight(a.officialSeverity);
+  });
+
+  for (const c of sortedChecks) {
+    const score = c.score < 0 ? '—' : `${scoreLight(c.score)}`;
+    lines.push(`| ${c.name} | ${officialSev(c.officialSeverity)} | ${score} |`);
+  }
+  lines.push('');
+  lines.push('</details>');
+  lines.push('');
+
+  return lines;
+}
+
+// ─── Section: SBOM ───────────────────────────────────────────────────────────
+
+function sbomSection(r: CheckResult): string[] {
+  const total = 1 + r.depLicenses.length;
+  const flaggedCount = r.depLicenses.filter(d => d.flagged.length > 0).length;
+  const isAllClean = flaggedCount === 0 && r.vulnerabilities.length === 0;
+
+  const lines: string[] = [
+    `## 📦 SBOM — ${total} Dependencies`,
+    '_Source: deps.dev_',
+    '',
+  ];
+
+  lines.push('<details>');
+  if (isAllClean) {
+    lines.push(`<summary>✅ <strong>SBOM Clean:</strong> All ${total} dependencies are compliant and free of known vulnerabilities (Click to expand).</summary>`);
+    lines.push('');
+  } else {
+    lines.push(`<summary>❌ <strong>SBOM Violation:</strong> Contains known vulnerabilities or restricted licenses (Click to expand).</summary>`);
+    lines.push('');
+    if (flaggedCount > 0) {
+      lines.push(`> [!CAUTION]`);
+      lines.push(`> **Risk Alert:** ${flaggedCount} dependencies contain restricted licenses (e.g., GPL) and have been highlighted below. For indirect dependencies, try upgrading the root package or use \`resolutions\` / \`overrides\` to force a compliant version.`);
+      lines.push('');
+    }
+  }
+
+  lines.push('| Component | Version | Scope | License | Scorecard | Status |');
+  lines.push('| :--- | :--- | :--- | :--- | :--- | :--- |');
+
+  const rootLic = r.licenses.length > 0 ? r.licenses.join(', ') : 'Unknown';
+  const rootStatus = r.vulnerabilities.length === 0 ? '✅' : `❌ ${r.vulnerabilities.length} vuln`;
+  const rootScore = r.scorecardScore !== null ? scoreLight(r.scorecardScore) : '⚪';
+  lines.push(`| [**${r.name}**](${r.depsDevUrl}) | \`${r.version}\` | Direct | \`${rootLic}\` | ${rootScore} | ${rootStatus} |`);
+
+  const sortedDeps = [...r.depLicenses].sort((a, b) => {
+    // 1. Sort by Status (blocked licenses first)
+    if (a.flagged.length > 0 && b.flagged.length === 0) return -1;
+    if (a.flagged.length === 0 && b.flagged.length > 0) return 1;
+
+    // 2. Sort by Scorecard Score (lowest score first, which is highest risk)
+    const scoreA = a.scorecardScore !== null && a.scorecardScore !== undefined ? a.scorecardScore : 100;
+    const scoreB = b.scorecardScore !== null && b.scorecardScore !== undefined ? b.scorecardScore : 100;
+    return scoreA - scoreB;
+  });
+
+  for (const dep of sortedDeps) {
+    const lic = dep.licenses.length > 0 ? dep.licenses.join(', ') : 'Unknown';
+    const scope = dep.relation === 'DIRECT' ? 'Direct' : 'Indirect';
+    const depUrl = `https://deps.dev/${r.system.toLowerCase()}/${encodeURIComponent(dep.name)}/${encodeURIComponent(dep.version)}`;
+    const depStatus = dep.flagged.length > 0 ? `❌ ${dep.flagged.join(', ')}` : '✅';
+    const depScore = dep.scorecardScore !== null && dep.scorecardScore !== undefined ? scoreLight(dep.scorecardScore) : '⚪';
+    lines.push(`| [${dep.name}](${depUrl}) | \`${dep.version}\` | ${scope} | \`${lic}\` | ${depScore} | ${depStatus} |`);
+  }
+
+  lines.push('');
+  lines.push('</details>');
+  lines.push('');
+  
+  return lines;
+}
+
+// ─── Section: Actionable Snippet ──────────────────────────────────────────────
+
+import semver from 'semver';
+
+function findSmartUpgrades(current: string, fixedVersions: string[]) {
+  // Simple fallback for non-semver (e.g., Maven)
+  let validFixed = fixedVersions.filter(v => semver.valid(v));
+  if (validFixed.length === 0) {
+    if (fixedVersions.length > 0) return { minimal: fixedVersions[fixedVersions.length - 1], latest: fixedVersions[fixedVersions.length - 1] };
+    return { minimal: null, latest: null };
+  }
+  
+  validFixed.sort(semver.compare);
+  const latest = validFixed[validFixed.length - 1];
+  
+  const currentObj = semver.parse(current);
+  let minimal = latest;
+  if (currentObj) {
+    const closestPatch = validFixed.find(v => {
+      const vObj = semver.parse(v);
+      return vObj && vObj.major === currentObj.major && vObj.minor === currentObj.minor && semver.gt(v, current);
+    });
+    if (closestPatch) minimal = closestPatch;
+  }
+  
+  return { minimal, latest };
+}
+
+function actionableBlock(r: CheckResult): string[] {
+  const lines: string[] = [
+    '## 🚀 Automated Remediation',
+    '',
+  ];
+
+  const hasBlocking = r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
+  
+  let targetName = r.name;
+  let targetVersion = r.version;
+  let message = `You can directly copy the following snippet to import \`${r.name}\` into your project:`;
+  let isIndirectVuln = false;
+  let indirectOverrides: Array<{ name: string; version: string; minimal: string | null; latest: string | null }> = [];
+
+  if (hasBlocking) {
+    const vulnViolations = r.violations.filter(v => v.type === 'VULNERABILITY');
+    const sbomVulnViolations = r.violations.filter(v => v.type === 'SBOM_VULNERABILITY');
+    const licenseViolations = r.violations.filter(v => v.type === 'LICENSE' || v.type === 'SBOM_LICENSE');
+    
+    let safeVersionFound = false;
+
+      // 情境 1 & 2: 主套件漏洞處理
+    if (vulnViolations.length > 0) {
+      const allFixed = r.vulnerabilities.flatMap(v => v.fixedVersions);
+      const upgrades = findSmartUpgrades(r.version, allFixed);
+      
+      if (upgrades.minimal) {
+        targetVersion = upgrades.minimal; 
+        safeVersionFound = true;
+        const upgradeStr = upgrades.minimal === upgrades.latest ? `\`${upgrades.minimal}\`` : `\`${upgrades.minimal}\` (No Breaking Changes) or Latest Stable \`${upgrades.latest}\``;
+        message = `> ❌ **BLOCKED (Direct Vulnerability)** — The requested version contains high-risk vulnerabilities.\n> \n> **💡 AI Guidance:** Official patches are available. Upgrade to ${upgradeStr}:`;
+      } else {
+        if (r.alternatives.length > 0) {
+          targetName = r.alternatives[0].name;
+          targetVersion = r.alternatives[0].version;
+          safeVersionFound = true;
+          message = `> ❌ **BLOCKED (Unpatched Vulnerability)** — There is currently **no official patch** available for this package!\n> \n> **💡 Remediation:**\n> 1. **Replace Package (Recommended)**: Use a secure alternative such as \`${targetName}\` (see snippet below).\n> 2. **Manual Fix**: If you must use this package, consider creating a manual patch or contributing a PR to the upstream repository.`;
+        } else {
+          return [
+            '## 🚀 Automated Remediation',
+            '',
+            `> ❌ **BLOCKED (Unpatched Vulnerability)** — No official patch available and no default alternatives found.`,
+            `> `,
+            `> **💡 Remediation:**`,
+            `> A safe installation snippet cannot be generated. You must manually analyze the CVEs to determine if source code patching is viable or seek other architectural solutions.`,
+            ''
+          ];
+        }
+      }
+    } 
+    // 情境 3: 影子相依漏洞處理 (Overrides)
+    else if (sbomVulnViolations.length > 0) {
+      isIndirectVuln = true;
+      message = `> ❌ **BLOCKED (Transitive Vulnerability)** — The root package is safe, but vulnerabilities exist deep within the dependency chain.\n> \n> **💡 AI Guidance:** Copy the following \`overrides\` / \`resolutions\` block into your \`package.json\` to force a secure underlying dependency version:`;
+      
+      for (const sbom of sbomVulnViolations) {
+        const [depName, depVer] = (sbom.affectedDep ?? '').split('@');
+        const fixed = sbom.fixedVersions ?? [];
+        const upgrades = findSmartUpgrades(depVer, fixed);
+        if (upgrades.minimal) {
+          indirectOverrides.push({ name: depName, version: depVer, minimal: upgrades.minimal, latest: upgrades.latest });
+        }
+      }
+    }
+    // 情境 4: 授權問題
+    else if (licenseViolations.length > 0) {
+      if (r.alternatives.length > 0) {
+        targetName = r.alternatives[0].name;
+        targetVersion = r.alternatives[0].version;
+        safeVersionFound = true;
+        message = `> ❌ **BLOCKED (License Conflict)** — This package uses a restricted license.\n> \n> **💡 Remediation:** Upgrading does not resolve license conflicts. We recommend switching to a compliant alternative package such as \`${targetName}\`:`;
+      } else {
+        return [
+          '## 🚀 Automated Remediation',
+          '',
+          `> ❌ **BLOCKED (License Conflict)** — This package violates corporate licensing policy and no default alternatives exist.`,
+          `> `,
+          `> **💡 Remediation:**`,
+          `> License issues cannot be patched by upgrading. Please consult the legal team for an exception or find an MIT/Apache-2.0 equivalent.`,
+          ''
+        ];
+      }
+    }
+  }
+
+  lines.push(message);
+  lines.push('');
+
+  const sys = r.system.toUpperCase();
+  
+  if (isIndirectVuln && sys === 'NPM') {
+    lines.push('```json');
+    lines.push('// Add this to your package.json');
+    lines.push('"overrides": {');
+    for (let i = 0; i < indirectOverrides.length; i++) {
+      const ov = indirectOverrides[i];
+      lines.push(`  "${ov.name}": "^${ov.minimal}"${i < indirectOverrides.length - 1 ? ',' : ''}`);
+    }
+    lines.push('}');
+    lines.push('```');
+    return lines;
+  }
+
+  let snippet = '';
+  if (sys === 'NPM') {
+    snippet = `npm install ${targetName}@${targetVersion}`;
+  } else if (sys === 'MAVEN') {
+    const parts = targetName.split(':');
+    const groupId = parts[0];
+    const artifactId = parts[1] || parts[0];
+    snippet = `<dependency>\n    <groupId>${groupId}</groupId>\n    <artifactId>${artifactId}</artifactId>\n    <version>${targetVersion}</version>\n</dependency>`;
+  } else if (sys === 'PYPI') {
+    snippet = `pip install ${targetName}==${targetVersion}`;
+  } else if (sys === 'GO') {
+    snippet = `go get ${targetName}@v${targetVersion.replace(/^v/, '')}`;
+  } else {
+    snippet = `${targetName} ${targetVersion}`;
+  }
+
+  const lang = sys === 'MAVEN' ? 'xml' : 'bash';
+
+  lines.push(`\`\`\`${lang}`);
+  lines.push(snippet);
+  lines.push(`\`\`\``);
+  lines.push('');
+
+  return lines;
+}
+
+// ─── Main Format Function ─────────────────────────────────────────────────────
+
+export function formatResult(r: CheckResult): string {
+  return [
+    ...verdictBanner(r),
+    ...versionWarning(r),
+    ...quickReference(r),
+    ...findingsAndActions(r),
+    ...licenseSection(r),
+    ...vulnerabilitySection(r),
+    ...scorecardSection(r),
+    ...sbomSection(r),
+    ...actionableBlock(r),
   ].join('\n');
 }
 
-export { ossieHeader };
+// ─── Batch Command Verdict ────────────────────────────────────────────────────
+
+export function formatCommandVerdict(results: CheckResult[]): string {
+  const failCount = results.filter(r =>
+    r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM')
+  ).length;
+  const warnCount = results.filter(r =>
+    !r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM') &&
+    r.violations.some(v => v.severity === 'LOW')
+  ).length;
+  const passCount = results.length - failCount - warnCount;
+
+  const overall = failCount > 0
+    ? `> ❌ **${failCount} Packages Blocked** — You must submit an exception request and gain Security Team approval before installation.`
+    : warnCount > 0
+      ? `> ⚠️ **All packages approved for installation**, but ${warnCount} packages have advisories.`
+      : `> ✅ **All ${results.length} packages successfully passed the audit.**`;
+
+  return [
+    '## Batch Audit Summary',
+    '',
+    '| Status | Count |',
+    '| :--- | ---: |',
+    `| Total Packages | ${results.length} |`,
+    `| ✅ Passed | ${passCount} |`,
+    `| ⚠️ Advisory | ${warnCount} |`,
+    `| ❌ Blocked | ${failCount} |`,
+    '',
+    overall,
+  ].join('\n');
+}

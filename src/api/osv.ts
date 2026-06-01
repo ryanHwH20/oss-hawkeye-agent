@@ -1,4 +1,5 @@
 import type { OsvVuln } from '../types.js';
+import cvss from 'cvss';
 
 const OSV_API = 'https://api.osv.dev/v1';
 
@@ -9,6 +10,7 @@ interface OsvQueryResponse {
     details?: string;
     aliases?: string[];
     severity?: Array<{ type: string; score: string }>;
+    database_specific?: { severity?: string; [key: string]: unknown };
     affected?: Array<{
       ranges?: Array<{
         type: string;
@@ -21,18 +23,49 @@ interface OsvQueryResponse {
 
 type OsvVulnEntry = NonNullable<OsvQueryResponse['vulns']>[number];
 
-function extractSeverity(vuln: OsvVulnEntry): OsvVuln['severity'] {
-  if (!vuln.severity?.length) return 'UNKNOWN';
-  for (const s of vuln.severity) {
-    const score = parseFloat(s.score);
-    if (!isNaN(score)) {
-      if (score >= 9.0) return 'CRITICAL';
-      if (score >= 7.0) return 'HIGH';
-      if (score >= 4.0) return 'MEDIUM';
-      return 'LOW';
+interface SeverityResult {
+  level: OsvVuln['severity'];
+  score: number | null;
+}
+
+function extractSeverity(vuln: OsvVulnEntry): SeverityResult {
+  let score: number | null = null;
+  let level: OsvVuln['severity'] = 'UNKNOWN';
+
+  // 1. Parse CVSS vector string
+  if (vuln.severity?.length) {
+    for (const s of vuln.severity) {
+      if (s.type === 'CVSS_V3' || s.type === 'CVSS_V2') {
+        const rawVector = s.score;
+        // The cvss library handles 3.0, but 3.1 is mathematically identical
+        const compatibleVector = rawVector.replace('CVSS:3.1', 'CVSS:3.0');
+        const calcScore = cvss.getScore(compatibleVector);
+        if (typeof calcScore === 'number' && !isNaN(calcScore) && calcScore > 0) {
+          score = calcScore;
+          break;
+        }
+      }
     }
   }
-  return 'UNKNOWN';
+
+  // 2. Map score to standard severity level
+  if (score !== null) {
+    if (score >= 9.0) level = 'CRITICAL';
+    else if (score >= 7.0) level = 'HIGH';
+    else if (score >= 4.0) level = 'MEDIUM';
+    else level = 'LOW';
+    return { level, score };
+  }
+
+  // 3. Fallback to database_specific severity string
+  if (vuln.database_specific?.severity) {
+    const s = vuln.database_specific.severity.toUpperCase();
+    if (s === 'CRITICAL' || s === 'HIGH' || s === 'MEDIUM' || s === 'LOW') {
+      return { level: s as OsvVuln['severity'], score: null };
+    }
+  }
+
+  return { level: 'UNKNOWN', score: null };
 }
 
 function extractFixedVersions(vuln: OsvVulnEntry): string[] {
@@ -82,14 +115,18 @@ export async function queryVulnerabilities(
     const data = (await res.json()) as OsvQueryResponse;
     if (!data.vulns?.length) return [];
 
-    return data.vulns.map((v) => ({
-      id: v.id,
-      url: `https://osv.dev/vulnerability/${v.id}`,
-      summary: v.summary ?? v.details?.slice(0, 120) ?? v.id,
-      severity: extractSeverity(v),
-      aliases: v.aliases ?? [],
-      fixedVersions: extractFixedVersions(v),
-    }));
+    return data.vulns.map((v) => {
+      const { level, score } = extractSeverity(v);
+      return {
+        id: v.id,
+        url: `https://osv.dev/vulnerability/${v.id}`,
+        summary: v.summary ?? v.details?.slice(0, 120) ?? v.id,
+        severity: level,
+        cvssScore: score,
+        aliases: v.aliases ?? [],
+        fixedVersions: extractFixedVersions(v),
+      };
+    });
   } catch {
     return [];
   }

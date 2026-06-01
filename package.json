@@ -1,19 +1,43 @@
 {
-  "name": "oss-license-tool",
+  "name": "hawkeye-agent",
   "version": "1.0.0",
-  "description": "CathayOSSGuard MCP Server — Open Source Compliance Tool powered by Ossie",
+  "description": "Context-Aware Security Guardrail for Developers",
+  "author": "ryanHwH20",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryanHwH20/hawkeye-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ryanHwH20/hawkeye-agent/issues"
+  },
+  "homepage": "https://github.com/ryanHwH20/hawkeye-agent#readme",
   "main": "dist/server.js",
+  "bin": {
+    "hawkeye": "./dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js"
   },
-  "keywords": ["mcp", "oss", "license", "security", "compliance"],
-  "author": "",
-  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "oss",
+    "license",
+    "security",
+    "compliance"
+  ],
   "type": "module",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/node": "^25.9.1",
-    "typescript": "^6.0.3"
+    "cvss": "^1.0.5",
+    "semver": "^7.8.1",
+    "typescript": "^6.0.3",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/cvss": "^1.0.3",
+    "@types/semver": "^7.7.1"
   }
 }

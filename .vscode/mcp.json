@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "cathayossguard": {
+      "command": "node",
+      "args": ["${workspaceFolder}/dist/server.js"]
+    }
+  }
+}

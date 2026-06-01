@@ -6,15 +6,58 @@ import type {
 
 const BASE = 'https://api.deps.dev/v3alpha';
 
+// ─── In-Memory LRU Cache ─────────────────────────────────────────────────────
+
+const CACHE_MAX = 200;
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+interface CacheEntry {
+  value: unknown;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+function cacheGet<T>(key: string): T | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    return undefined;
+  }
+  // LRU: move to end
+  cache.delete(key);
+  cache.set(key, entry);
+  return entry.value as T;
+}
+
+function cacheSet(key: string, value: unknown): void {
+  // Evict oldest if at capacity
+  if (cache.size >= CACHE_MAX) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey !== undefined) cache.delete(firstKey);
+  }
+  cache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+// ─── Fetch Helper ─────────────────────────────────────────────────────────────
+
 async function fetchJson<T>(url: string): Promise<T | null> {
+  const cached = cacheGet<T>(url);
+  if (cached !== undefined) return cached;
+
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
-    return (await res.json()) as T;
+    const data = (await res.json()) as T;
+    cacheSet(url, data);
+    return data;
   } catch {
     return null;
   }
 }
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * Get version info for a package (licenses, advisory count, etc.)
@@ -50,26 +93,67 @@ export async function getDependencies(
 }
 
 /**
- * Get OpenSSF Scorecard for a package
+ * Get OpenSSF Scorecard for a package via deps.dev project data
  */
 export async function getScorecard(
   system: string,
   name: string,
   version: string
 ): Promise<DepsDevScorecardResponse | null> {
-  // Scorecard is available via the project endpoint
+  // 1. Get version info to find the SOURCE_REPO link
   const versionUrl = `${BASE}/systems/${encodeURIComponent(system)}/packages/${encodeURIComponent(name)}/versions/${encodeURIComponent(version)}`;
-  const versionData = await fetchJson<{ links?: Array<{ label: string; url: string }> }>(versionUrl);
+  const versionData = await fetchJson<{
+    links?: Array<{ label: string; url: string }>;
+    relatedProjects?: Array<{ projectKey: { id: string }; relationType: string }>;
+  }>(versionUrl);
 
-  // Try to get scorecard from the package's project
-  const projectUrl = `${BASE}/systems/${encodeURIComponent(system)}/packages/${encodeURIComponent(name)}/versions/${encodeURIComponent(version)}:scorecard`;
-  // deps.dev doesn't expose scorecard directly on version; try project-level
-  // Alternative: use the projects endpoint
-  const projData = await fetchJson<DepsDevScorecardResponse>(projectUrl);
-  if (projData?.overallScore !== undefined) return projData;
+  // 2. Try to extract project ID from relatedProjects first (most reliable)
+  let projectId: string | null = null;
+  if (versionData?.relatedProjects) {
+    const sourceProject = versionData.relatedProjects.find(p => p.relationType === 'SOURCE_REPO');
+    if (sourceProject) {
+      projectId = sourceProject.projectKey.id;
+    }
+  }
 
-  // Fallback: try via advisory/project lookup
-  return null;
+  // 3. Fallback: extract from links
+  if (!projectId && versionData?.links) {
+    const sourceLink = versionData.links.find(l => l.label === 'SOURCE_REPO');
+    if (sourceLink?.url) {
+      const match = sourceLink.url.match(/(?:github\.com|gitlab\.com|bitbucket\.org)[/:]([^/]+\/[^/.]+)/);
+      if (match) {
+        const host = sourceLink.url.match(/(github\.com|gitlab\.com|bitbucket\.org)/);
+        if (host) {
+          projectId = `${host[1]}/${match[1]}`;
+        }
+      }
+    }
+  }
+
+  if (!projectId) return null;
+
+  // 4. Query the GetProject endpoint for scorecard
+  const projectUrl = `${BASE}/projects/${encodeURIComponent(projectId)}`;
+  const projData = await fetchJson<{
+    scorecard?: {
+      date: string;
+      overallScore: number;
+      checks: Array<{
+        name: string;
+        score: number;
+        reason: string;
+        documentation: { shortDescription: string; url: string };
+      }>;
+    };
+  }>(projectUrl);
+
+  if (!projData?.scorecard) return null;
+
+  return {
+    date: projData.scorecard.date,
+    overallScore: projData.scorecard.overallScore,
+    checks: projData.scorecard.checks,
+  };
 }
 
 /**

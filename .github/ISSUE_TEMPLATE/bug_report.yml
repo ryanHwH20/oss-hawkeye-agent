@@ -1,0 +1,58 @@
+name: Bug Report
+description: Create a report to help us improve Hawkeye Agent.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! 
+        Before reporting, please make sure you are running the latest version of `hawkeye-agent`.
+  - type: input
+    id: version
+    attributes:
+      label: Hawkeye Agent Version
+      description: What version of hawkeye-agent are you running? (Run `hawkeye --version` or check package.json)
+      placeholder: "e.g., 1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      description: Which ecosystem were you testing? (e.g., NPM, PYPI, MAVEN, GO)
+      placeholder: "NPM"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: What exact command did you run?
+      placeholder: |
+        1. Run `hawkeye NPM express 4.16.0`
+        2. Wait for result...
+        3. See error...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior / Output
+      description: Please paste the full terminal output or error trace here.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: What OS are you using? (Windows, macOS, Linux)
+    validations:
+      required: false
