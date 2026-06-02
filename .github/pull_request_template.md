@@ -1,23 +1,30 @@
 ## Description
 
-<!-- Describe the goal of this PR. What problem does it solve? -->
+Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
 
-## Related Issues
+Fixes # (issue)
 
-<!-- E.g., Fixes #123 -->
+## Type of change
 
-## Changes Made
+Please delete options that are not relevant.
 
-- 
-- 
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] This change requires a documentation update
 
-## Verification
+## How Has This Been Tested?
 
-- [ ] I have run `npm run build` successfully.
-- [ ] I have linked the package locally (`npm link`) and tested the CLI command.
-- [ ] I have updated the documentation (`README.md`) if necessary.
-- [ ] My code follows the existing style guidelines.
+Please describe the tests that you ran to verify your changes.
 
-## Additional Notes
+- [ ] Local CLI execution
+- [ ] Tested via MCP interface
+- [ ] Other: 
 
-<!-- Any specific areas you'd like reviewers to look at? -->
+## Checklist:
+
+- [ ] My code follows the style guidelines of this project
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have made corresponding changes to the documentation
+- [ ] My changes generate no new TypeScript build errors (`npm run build`)

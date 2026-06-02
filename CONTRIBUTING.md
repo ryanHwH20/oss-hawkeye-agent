@@ -1,81 +1,48 @@
 # Contributing to Hawkeye Agent
 
-First off, thank you for considering contributing to **Hawkeye Agent**! It's people like you that make Hawkeye an indisputable standard for open-source supply chain security.
+First off, thank you for considering contributing to Hawkeye Agent! It's people like you that make Hawkeye Agent such a great tool for the open-source and DevSecOps community.
 
-## Code of Conduct
+## Where do I go from here?
 
-By participating in this project, you are expected to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
+If you've noticed a bug or have a feature request, make sure to check our [Issues](https://github.com/ryanHwH20/oss-hawkeye-agent/issues) first to see if someone else has already created one. If not, go ahead and [make one](https://github.com/ryanHwH20/oss-hawkeye-agent/issues/new/choose)!
 
-## How Can I Contribute?
+## Local Development
 
-### Reporting Bugs
+Hawkeye Agent is built with TypeScript and Node.js.
 
-This section guides you through submitting a bug report. Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
+### Prerequisites
+- Node.js (v18 or higher recommended)
+- npm (v9 or higher)
 
-- **Check open issues** before submitting a new report to avoid duplicates.
-- Use the **Bug Report** template when opening an issue.
-- Provide as much detail as possible (e.g., node version, OS, exact command run, and any error traces).
+### Setup
 
-### Suggesting Enhancements
-
-We welcome new features, integrations with other ecosystems (Cargo, Go, Maven), and general improvements.
-
-- Use the **Feature Request** template.
-- Explain the current behavior and why the proposed behavior would be an improvement.
-- If suggesting a new feature, provide a real-world use case.
-
-### Pull Requests
-
-1. **Fork** the repo on GitHub.
-2. **Clone** the project to your own machine.
-3. **Commit** changes to your own branch.
-4. **Push** your work back up to your fork.
-5. Submit a **Pull Request** so that we can review your changes.
-
-NOTE: Be sure to merge the latest from "upstream" before making a pull request!
-
-## Development Setup
-
-To set up your local development environment:
-
-1. Clone your fork:
+1. Fork and clone the repository:
    ```bash
-   git clone https://github.com/ryanHwH20/oss-hawkeye-agent.git
+   git clone https://github.com/YOUR_USERNAME/oss-hawkeye-agent.git
    cd oss-hawkeye-agent
    ```
+
 2. Install dependencies:
    ```bash
    npm install
    ```
-3. Compile TypeScript:
+
+3. Build the project:
    ```bash
    npm run build
    ```
-4. Test locally using the binary:
+
+4. You can test the CLI locally by running the built artifact:
    ```bash
-   npm link
-   hawkeye NPM express 4.16.0
+   node dist/cli.js NPM express 5.2.1
    ```
 
-## Commit Message Guidelines
+## Pull Request Process
 
-We use [Conventional Commits](https://www.conventionalcommits.org/). This helps us automatically generate changelogs.
+1. Ensure any changes or new features have been discussed in an issue first.
+2. Create a new branch from `main` (`git checkout -b feature/my-awesome-feature`).
+3. Make your changes and ensure `npm run build` succeeds without TypeScript errors.
+4. Update the `README.md` or `SKILL.md` with details of changes to the interface, if applicable.
+5. Push your branch to GitHub and submit a Pull Request.
 
-Format:
-`<type>[optional scope]: <description>`
-
-Examples:
-- `feat(cli): add support for rust cargo`
-- `fix(formatter): correct markdown table alignment`
-- `docs(readme): update mcp server instructions`
-
-Common Types:
-- `feat`: A new feature
-- `fix`: A bug fix
-- `docs`: Documentation only changes
-- `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc)
-- `refactor`: A code change that neither fixes a bug nor adds a feature
-- `test`: Adding missing tests or correcting existing tests
-- `chore`: Changes to the build process or auxiliary tools and libraries
-
-Thank you for contributing! 🎾
+Once your PR is submitted, it will be reviewed by the maintainers. We may suggest some changes or improvements or alternative approaches.
