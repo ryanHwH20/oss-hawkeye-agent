@@ -97,12 +97,21 @@ Add this to your IDE's MCP configuration (e.g., `.vscode/mcp.json`):
 }
 ```
 
-Once connected, you can configure your AI's persona by providing it with our official [SKILL.md](SKILL.md) instructions. This transforms your LLM into "Hawkeye", an enterprise-grade open source security expert.
+### 💬 Conversational UX & The Two-Step Guardrail
 
-The AI will automatically audit packages when you:
-- Ask "Is lodash safe?"
-- Paste `npm install express`
-- Ask "Can we use GPL packages?"
+Once connected, provide your AI assistant with our official [SKILL.md](SKILL.md) instructions. This transforms your LLM into **Hawkeye**, an enterprise-grade security expert.
+
+Hawkeye's primary interaction model is a **two-step conversational guardrail**:
+
+1. **Step 1: Intercept & Audit:** When you attempt to install a package or ask about it, Hawkeye intercepts the intent, runs the MCP tool, and returns a comprehensive security report. **It will not install the package yet.**
+2. **Step 2: Approve & Execute:** If the package is approved, simply repeat the command or tell Hawkeye to "go ahead." Hawkeye will recognize the package is safe and actually execute the installation.
+
+**You can ask Hawkeye to:**
+- **Audit before install:** `npm install express`
+- **Check package security:** "Is lodash safe?", "Are there any vulnerabilities in requests?"
+- **Inquire about licensing:** "What is the license of this package?", "Can we use GPL packages?"
+- **Find secure alternatives:** "What are the safe alternatives to moment?"
+- **Check enterprise policy:** "What is the company's open source policy?"
 
 ---
 
