@@ -17,7 +17,7 @@ When Hawkeye calls a package **"OUT"**, it doesn't just block — it provides im
 
 ## ✨ Features
 
-- 🎾 **Millimeter-Accurate Line Calling** — Blocks high-risk vulnerabilities and non-compliant licenses instantly, returning standard exit codes (`0`/`1`) for CI/CD integration.
+- 🎾 **Millimeter-Accurate Line Calling** — Blocks high-risk vulnerabilities and non-compliant licenses instantly, returning standard exit codes (`0`/`1`).
 - 🔍 **Deep SBOM Transitive Scanning** — Analyzes full dependency graphs via [deps.dev](https://deps.dev) to catch "shadow vulnerabilities" that standard manifest scanners miss.
 - 💡 **AI-Powered Remediation** — When a package is blocked, Hawkeye generates upgrade snippets, `overrides` blocks, or delegates to your AI assistant to recommend compliant alternatives dynamically.
 - 🤖 **MCP Protocol Native** — Seamlessly integrates into Cursor, VS Code, or any LLM agent IDE via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), providing real-time architectural guardrails *inside* your conversation.
@@ -97,27 +97,6 @@ Once connected, your AI assistant will automatically audit packages when you:
 
 ---
 
-## ⚙️ CI/CD Integration
-
-Hawkeye returns standard exit codes (`0` = pass, `1` = blocked), making it a drop-in security gate for any pipeline.
-
-### GitHub Actions
-
-```yaml
-name: Hawkeye Agent Audit
-on: [pull_request]
-jobs:
-  audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-      - run: npm install -g oss-hawkeye-agent
-      - run: hawkeye NPM express 5.2.1
-```
-
----
-
 ## 🏛️ Policy Configuration
 
 Hawkeye uses a `.audit-agent.yaml` file in the working directory to enforce compliance. If none is found, it falls back to the built-in `policy.json`.
@@ -154,7 +133,7 @@ We're building Hawkeye Agent into the definitive shift-left security tool for de
 - [x] MCP server with 3 tools (`inspect_package`, `check_command`, `show_policy`)
 - [x] AI Skill Prompt (`SKILL.md`) with loop prevention and dynamic alternative recommendations
 - [x] Automated remediation snippets (upgrade paths, overrides, AI-guided alternatives)
-- [x] CLI with standard exit codes for CI/CD
+- [x] CLI with standard exit codes
 - [x] Policy-as-Code via `.audit-agent.yaml`
 
 ### 🔜 Next Up
