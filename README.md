@@ -28,18 +28,25 @@ When Hawkeye calls a package **"OUT"**, it doesn't just block — it provides im
 
 ## 🚀 Quick Start
 
-### Installation
+### 1. Build from Source
+
+Since we are preparing for our first NPM release, you can currently run Hawkeye by cloning the repository:
 
 ```bash
-npm install -g oss-hawkeye-agent
+git clone https://github.com/ryanHwH20/oss-hawkeye-agent.git
+cd oss-hawkeye-agent
+npm install
+npm run build
 ```
 
-### Single Package Audit
+### 2. Single Package Audit (CLI)
+
+You can run the built CLI directly to get a full enterprise-grade security report:
 
 ```bash
-hawkeye NPM express 4.16.0
-hawkeye PYPI requests 2.31.0
-hawkeye MAVEN org.springframework.boot:spring-boot 3.5.8
+node dist/cli.js NPM express 4.16.0
+node dist/cli.js PYPI requests 2.31.0
+node dist/cli.js MAVEN org.springframework.boot:spring-boot 3.5.8
 ```
 
 ### Example Output
@@ -90,7 +97,9 @@ Add this to your IDE's MCP configuration (e.g., `.vscode/mcp.json`):
 }
 ```
 
-Once connected, your AI assistant will automatically audit packages when you:
+Once connected, you can configure your AI's persona by providing it with our official [SKILL.md](SKILL.md) instructions. This transforms your LLM into "Hawkeye", an enterprise-grade open source security expert.
+
+The AI will automatically audit packages when you:
 - Ask "Is lodash safe?"
 - Paste `npm install express`
 - Ask "Can we use GPL packages?"
