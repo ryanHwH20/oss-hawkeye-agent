@@ -229,9 +229,9 @@ export async function checkPackage(
     violations.push({
       type: 'SCORECARD',
       severity: 'LOW',
-      reason: 'OpenSSF 高權重安全指標得分為 0（建議關注）',
+      reason: 'OpenSSF High-Severity Security Metrics scored 0 (Advisory)',
       details: highSeverityZeroChecks.map(c => `${c.name}: 0/10`),
-      riskExplanation: `以下高嚴重度 Scorecard 指標得分為零：${highSeverityZeroChecks.map(c => c.name).join(', ')}。雖然目前政策不強制阻擋，但這代表潛在的供應鏈安全缺陷，建議作為選用套件時的參考。`,
+      riskExplanation: `The following high-severity Scorecard metrics scored zero: ${highSeverityZeroChecks.map(c => c.name).join(', ')}. While not strictly blocked by current policy, this indicates potential supply chain security flaws and should be considered when adopting this package.`,
     });
   }
 

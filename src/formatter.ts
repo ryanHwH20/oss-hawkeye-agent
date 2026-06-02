@@ -123,7 +123,7 @@ function quickReference(r: CheckResult): string[] {
   ];
 }
 
-// ─── Section: Findings & Actions (核心用戶指引) ───────────────────────────────
+// ─── Section: Findings & Actions (Core User Guide) ───────────────────────────────
 
 function findingsAndActions(r: CheckResult): string[] {
   const blocking = r.violations.filter(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
@@ -282,7 +282,7 @@ function vulnerabilitySection(r: CheckResult): string[] {
 // ─── Section: OpenSSF Scorecard ───────────────────────────────────────────────
 
 function scorecardSection(r: CheckResult): string[] {
-  const scoreStr = r.scorecardScore !== null ? `${scoreLight(r.scorecardScore)}` : '⚪ 無資料';
+  const scoreStr = r.scorecardScore !== null ? `${scoreLight(r.scorecardScore)}` : '⚪ N/A';
 
   const lines: string[] = [
     `## 📊 OpenSSF Scorecard (${scoreStr})`,
@@ -441,7 +441,7 @@ function actionableBlock(r: CheckResult): string[] {
     
     let safeVersionFound = false;
 
-      // 情境 1 & 2: 主套件漏洞處理
+      // Scenario 1 & 2: Direct package vulnerability handling
     if (vulnViolations.length > 0) {
       const allFixed = r.vulnerabilities.flatMap(v => v.fixedVersions);
       const upgrades = findSmartUpgrades(r.version, allFixed);
@@ -464,7 +464,7 @@ function actionableBlock(r: CheckResult): string[] {
         ];
       }
     } 
-    // 情境 3: 影子相依漏洞處理 (Overrides)
+    // Scenario 3: Shadow dependency vulnerability handling (Overrides)
     else if (sbomVulnViolations.length > 0) {
       isIndirectVuln = true;
       message = `> ❌ **BLOCKED (Transitive Vulnerability)** — The root package is safe, but vulnerabilities exist deep within the dependency chain.\n> \n> **💡 AI Guidance:** Copy the following \`overrides\` / \`resolutions\` block into your \`package.json\` to force a secure underlying dependency version:`;
@@ -478,7 +478,7 @@ function actionableBlock(r: CheckResult): string[] {
         }
       }
     }
-    // 情境 4: 授權問題
+    // Scenario 4: License issues
     else if (licenseViolations.length > 0) {
       return [
         '## 🚀 Automated Remediation',

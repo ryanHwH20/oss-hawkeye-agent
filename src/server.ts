@@ -29,16 +29,16 @@ const TOOLS = [
       properties: {
         ecosystem: {
           type: 'string',
-          description: '套件生態系，例如 npm, pypi, go, cargo, rubygems, nuget, maven',
+          description: 'Package ecosystem, e.g. NPM, PYPI, GO, CARGO, RUBYGEMS, NUGET, MAVEN',
           enum: ['NPM', 'PYPI', 'CARGO', 'GO', 'RUBYGEMS', 'NUGET', 'MAVEN'],
         },
         package_name: {
           type: 'string',
-          description: '套件名稱，例如 lodash, requests, serde',
+          description: 'Package name, e.g. lodash, requests, serde',
         },
         version: {
           type: 'string',
-          description: '特定版本號，若無則預設為 latest',
+          description: 'Specific version number, defaults to latest if omitted',
         },
       },
       required: ['ecosystem', 'package_name'],
@@ -57,16 +57,16 @@ const TOOLS = [
       properties: {
         ecosystem: {
           type: 'string',
-          description: '套件生態系統，可用值：NPM, PYPI, CARGO, GO, RUBYGEMS, NUGET, MAVEN',
+          description: 'Package ecosystem. Allowed values: NPM, PYPI, CARGO, GO, RUBYGEMS, NUGET, MAVEN',
           enum: ['NPM', 'PYPI', 'CARGO', 'GO', 'RUBYGEMS', 'NUGET', 'MAVEN'],
         },
         package: {
           type: 'string',
-          description: '套件名稱，如 lodash、requests、serde',
+          description: 'Package name, e.g. lodash, requests, serde',
         },
         version: {
           type: 'string',
-          description: '指定版本（選填），不填則自動取最新穩定版',
+          description: 'Specific version (optional). Defaults to latest stable version.',
         },
       },
       required: ['ecosystem', 'package'],
@@ -84,7 +84,7 @@ const TOOLS = [
       properties: {
         command: {
           type: 'string',
-          description: '完整的安裝指令，例如：npm install lodash 或 pip install mysql-connector-python',
+          description: 'The full installation command, e.g., npm install lodash or pip install mysql-connector-python',
         },
       },
       required: ['command'],
@@ -129,7 +129,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         `| 🛡️ Known Vulnerabilities | ${policy.blockVulnerabilities ? '⛔ Blocked' : '✅ Allowed'} |`,
         `| 🗑️ Deprecated Packages | ${policy.blockDeprecated ? '⛔ Blocked' : '✅ Allowed'} |`,
         '',
-        `**例外申請表單 (Exception Request Form):** ${policy.exceptionFormUrl}`,
+        `**Exception Request Form:** ${policy.exceptionFormUrl}`,
         '',
         '> "Hawkeye Agent: The indisputable, high-precision line-judge for your software supply chain."',
       ];
