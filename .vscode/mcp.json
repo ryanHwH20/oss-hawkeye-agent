@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "oss-hawkeye-agent": {
-      "command": "node",
-      "args": ["${workspaceFolder}/dist/server.js"]
-    }
-  }
-}

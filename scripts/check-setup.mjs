@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const checks = [];
@@ -9,20 +9,8 @@ function addCheck(name, pass, detail) {
 
 const root = process.cwd();
 
-const distServer = resolve(root, 'dist', 'server.js');
-addCheck('Build output exists', existsSync(distServer), distServer);
-
-const workspaceMcp = resolve(root, '.vscode', 'mcp.json');
-let mcpHasServer = false;
-if (existsSync(workspaceMcp)) {
-  try {
-    const mcp = JSON.parse(readFileSync(workspaceMcp, 'utf8'));
-    mcpHasServer = Boolean(mcp?.mcpServers?.['oss-hawkeye-agent']);
-  } catch {
-    mcpHasServer = false;
-  }
-}
-addCheck('Workspace MCP server configured', mcpHasServer, workspaceMcp);
+addCheck('CLI build output exists', existsSync(resolve(root, 'dist', 'cli.js')), resolve(root, 'dist', 'cli.js'));
+addCheck('Core build output exists', existsSync(resolve(root, 'dist', 'checker.js')), resolve(root, 'dist', 'checker.js'));
 
 const skillPath = resolve(root, '.github', 'skills', 'hawkeye-agent', 'SKILL.md');
 addCheck('Skill file in auto-discovery path', existsSync(skillPath), skillPath);

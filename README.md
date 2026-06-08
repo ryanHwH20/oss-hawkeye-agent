@@ -18,11 +18,26 @@ When Hawkeye calls a package **"OUT"**, it doesn't just block — it provides im
 ## ✨ Features
 
 - 🎾 **Millimeter-Accurate Line Calling** — Blocks high-risk vulnerabilities and non-compliant licenses instantly, returning standard exit codes (`0`/`1`).
+- 🗣️ **Ask-First Security Workflow** — Developers ask in natural language, and Hawkeye returns one integrated audit report with policy verdict + remediation guidance.
 - 🔍 **Deep SBOM Transitive Scanning** — Analyzes full dependency graphs via [deps.dev](https://deps.dev) to catch "shadow vulnerabilities" that standard manifest scanners miss.
 - 💡 **AI-Powered Remediation** — When a package is blocked, Hawkeye generates upgrade snippets, `overrides` blocks, or delegates to your AI assistant to recommend compliant alternatives dynamically.
-- 🤖 **MCP Protocol Native** — Seamlessly integrates into Cursor, VS Code, or any LLM agent IDE via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io), providing real-time architectural guardrails *inside* your conversation.
+- 🤖 **Skill-Driven Workflow** — Works with workspace skills and local CLI execution so your AI assistant can enforce security checks before install actions.
 - 🌐 **7 Ecosystems** — NPM, PyPI, Cargo, Go, RubyGems, NuGet, Maven — all from a single tool.
 - 🏛️ **Policy-as-Code** — Drop a `.audit-agent.yaml` into your repo to enforce organization-specific compliance rules.
+
+---
+
+## ✅ Requirements
+
+Before setup, make sure your local environment meets the following:
+
+- Node.js 18+ (Node.js 20+ recommended)
+- npm 9+
+- Internet access to `https://api.osv.dev`
+- Internet access to `https://api.deps.dev`
+- Internet access to `https://osv.dev`
+- Internet access to `https://deps.dev`
+- VS Code with Copilot Chat (for conversational skill workflow)
 
 ---
 
@@ -30,7 +45,7 @@ When Hawkeye calls a package **"OUT"**, it doesn't just block — it provides im
 
 ### 1. Build from Source
 
-Since we are preparing for our first NPM release, you can currently run Hawkeye by cloning the repository:
+Run Hawkeye from source by cloning the repository:
 
 ```bash
 git clone https://github.com/ryanHwH20/oss-hawkeye-agent.git
@@ -41,7 +56,7 @@ npm run build
 
 ### 1.5 One-Time Developer Setup (Recommended)
 
-To make new Copilot sessions consistently use Hawkeye MCP + SOP, complete this once per machine:
+To make new Copilot sessions consistently use Hawkeye Skill + CLI SOP, complete this once per machine:
 
 1. Build the project:
 
@@ -50,23 +65,9 @@ npm install
 npm run build
 ```
 
-2. Configure VS Code user-level MCP (`%APPDATA%\\Code\\User\\mcp.json`) with your local absolute path:
-
-```json
-{
-  "servers": {
-    "oss-hawkeye-agent": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "C:/path/to/oss-hawkeye-agent/dist/server.js"
-      ],
-      "cwd": "C:/path/to/oss-hawkeye-agent"
-    }
-  },
-  "inputs": []
-}
-```
+2. Keep workspace skill and instructions files in place:
+- `.github/skills/hawkeye-agent/SKILL.md`
+- `.github/copilot-instructions.md`
 
 3. Reload VS Code window.
 
@@ -110,60 +111,55 @@ npm install express@4.21.2
 
 ---
 
-## 🤖 MCP (Model Context Protocol) Integration
+## 🤖 Skill + CLI Integration
 
-Hawkeye Agent is built from the ground up as an **MCP server**. By connecting it to an LLM, the AI becomes context-aware of your organization's security posture and can prevent developers from introducing non-compliant packages *before* they are even installed.
+Hawkeye is designed to run as a local CLI auditor while AI assistant behavior is controlled by workspace skill instructions.
 
-### Available MCP Tools
+### CLI Commands
 
-| Tool | Description |
-| :--- | :--- |
-| `inspect_package` ⭐ | Enterprise-grade deep evaluation of a single package |
-| `check_command` | Parse installation commands (`npm install lodash express`) and run batch assessments |
-| `show_policy` | View the active enterprise security baseline |
+Use the built CLI directly for deterministic security checks:
 
-### Setup for VS Code (Roo Code / Cline)
-
-Add this to your IDE's MCP configuration (e.g., `.vscode/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "oss-hawkeye-agent": {
-      "command": "node",
-      "args": ["${workspaceFolder}/dist/server.js"]
-    }
-  }
-}
-```
-
-### Setup for Cursor / Gemini IDE
-
-Hawkeye includes built-in configurations. Just open the project in Cursor or Gemini IDE, and the MCP server will be automatically detected via `.cursor/mcp.json` or `.gemini/mcp.json`.
-
-### Setup for Claude Desktop
-
-Add this to your `claude_desktop_config.json` (replacing `<path-to>` with your actual absolute path):
-
-```json
-{
-  "mcpServers": {
-    "oss-hawkeye-agent": {
-      "command": "node",
-      "args": ["<path-to>/oss-hawkeye-agent/dist/server.js"]
-    }
-  }
-}
+```bash
+node dist/cli.js NPM lodash
+node dist/cli.js PYPI requests 2.31.0
+node dist/cli.js GO github.com/gin-gonic/gin
 ```
 
 ### 💬 Conversational UX & The Two-Step Guardrail
 
 Once connected, keep your workspace skill at [.github/skills/hawkeye-agent/SKILL.md](.github/skills/hawkeye-agent/SKILL.md). This transforms your LLM into **Hawkeye**, an enterprise-grade security expert.
 
-Hawkeye's primary interaction model is a **two-step conversational guardrail**:
+### Demo GIF (Question -> Integrated Report)
 
-1. **Step 1: Intercept & Audit:** When you attempt to install a package or ask about it, Hawkeye intercepts the intent, runs the MCP tool, and returns a comprehensive security report. **It will not install the package yet.**
+The demo below shows the signature experience: ask a question, get one integrated security report.
+
+<img src="./docs/assets/hawkeye-conversation-demo.gif" alt="Hawkeye Conversational Demo" width="640" />
+
+Hawkeye's primary interaction model is a **two-step conversational guardrail** built for real developer conversations:
+
+1. **Step 1: Intercept & Audit:** When you attempt to install a package or ask about it, Hawkeye intercepts the intent, runs the CLI audit flow, and returns a comprehensive security report. **It will not install the package yet.**
 2. **Step 2: Approve & Execute:** If the package is approved, simply repeat the command or tell Hawkeye to "go ahead." Hawkeye will recognize the package is safe and actually execute the installation.
+
+### Why This Is the Signature Experience
+
+Most tools require developers to stitch together multiple outputs. Hawkeye is optimized for one question to one integrated report:
+
+- Single response that combines license, vulnerabilities, scorecard, SBOM, policy verdict, and remediation
+- Clear pass/block decision before any install action proceeds
+- Natural-language interaction that still remains deterministic via CLI-backed checks
+
+### Example Conversation Flow
+
+```text
+Developer: Is lodash safe for our project?
+Hawkeye: [returns full integrated audit report]
+
+Developer: npm install lodash
+Hawkeye: Choose mode -> (1) Security report first (2) Direct install now
+
+Developer: 1
+Hawkeye: [returns full integrated audit report with policy verdict and remediation]
+```
 
 **You can ask Hawkeye to:**
 - **Audit before install:** `npm install express`
@@ -207,17 +203,20 @@ We're building Hawkeye Agent into the definitive shift-left security tool for de
 - [x] CVE vulnerability scanning via [OSV.dev](https://osv.dev)
 - [x] OpenSSF Scorecard integration with severity-weighted analysis
 - [x] Deep SBOM transitive dependency scanning
-- [x] MCP server with 3 tools (`inspect_package`, `check_command`, `show_policy`)
+- [x] Skill-guided CLI workflow for package audits and command checks
 - [x] AI Skill Prompt (`SKILL.md`) with loop prevention and dynamic alternative recommendations
+- [x] Conversational two-step guardrail (ask -> integrated report -> approve/install)
 - [x] Automated remediation snippets (upgrade paths, overrides, AI-guided alternatives)
 - [x] CLI with standard exit codes
 - [x] Policy-as-Code via `.audit-agent.yaml`
+- [x] Publish to NPM (`oss-hawkeye-agent@1.0.1`)
+- [x] In-memory caching layer with TTL for API responses
+- [x] Setup and smoke checks (`check:setup`, `check:smoke`)
 
 ### 🔜 Next Up
 
-- [ ] **Publish to NPM** — Enable `npx oss-hawkeye-agent` for instant use
+- [ ] **AI Install Enforcement Gate** — When AI attempts any package install command, it must pass Hawkeye audit first (or explicitly choose guarded bypass), then proceed to execution.
 - [ ] **`--json` and `--sarif` output** — Machine-readable formats for toolchain integration
-- [ ] **Caching layer** — In-memory + disk cache with TTL to avoid redundant API calls
 - [ ] **Comprehensive test suite** — Vitest + mocked API responses for contributor confidence
 
 ### 🔮 Future
@@ -241,11 +240,11 @@ We're building Hawkeye Agent into the definitive shift-left security tool for de
 | Vulnerability Scanning | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SBOM Analysis | ✅ | ✅ | ✅ | ❌ | ❌ |
 | OpenSSF Scorecard | ✅ | ❌ | ❌ | ❌ | ❌ |
-| AI-Native (MCP) | ✅ ⭐ | ❌ | ❌ | ❌ | ❌ |
+| AI-Native (Skill + CLI) | ✅ ⭐ | ❌ | ❌ | ❌ | ❌ |
 | Policy-as-Code | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Free & Open Source | ✅ | Freemium | Freemium | ✅ | ✅ |
 
-> **Hawkeye's unique advantage:** It's the only open-source security tool that is **MCP-native**, giving LLMs real-time, structured security context about every package a developer touches — right inside the IDE conversation.
+> **Hawkeye's unique advantage:** It combines skill-guided AI behavior with deterministic local CLI checks, giving teams consistent, auditable package decisions right inside the IDE conversation.
 
 ---
 
