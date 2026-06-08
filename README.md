@@ -39,6 +39,46 @@ npm install
 npm run build
 ```
 
+### 1.5 One-Time Developer Setup (Recommended)
+
+To make new Copilot sessions consistently use Hawkeye MCP + SOP, complete this once per machine:
+
+1. Build the project:
+
+```bash
+npm install
+npm run build
+```
+
+2. Configure VS Code user-level MCP (`%APPDATA%\\Code\\User\\mcp.json`) with your local absolute path:
+
+```json
+{
+  "servers": {
+    "oss-hawkeye-agent": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "C:/path/to/oss-hawkeye-agent/dist/server.js"
+      ],
+      "cwd": "C:/path/to/oss-hawkeye-agent"
+    }
+  },
+  "inputs": []
+}
+```
+
+3. Reload VS Code window.
+
+4. Run setup checks from project root:
+
+```bash
+npm run check:setup
+npm run check:smoke
+```
+
+If both pass, new sessions should reliably trigger Hawkeye flow on install commands.
+
 ### 2. Single Package Audit (CLI)
 
 You can run the built CLI directly to get a full enterprise-grade security report:
@@ -118,7 +158,7 @@ Add this to your `claude_desktop_config.json` (replacing `<path-to>` with your a
 
 ### 💬 Conversational UX & The Two-Step Guardrail
 
-Once connected, provide your AI assistant with our official [SKILL.md](SKILL.md) instructions. This transforms your LLM into **Hawkeye**, an enterprise-grade security expert.
+Once connected, keep your workspace skill at [.github/skills/hawkeye-agent/SKILL.md](.github/skills/hawkeye-agent/SKILL.md). This transforms your LLM into **Hawkeye**, an enterprise-grade security expert.
 
 Hawkeye's primary interaction model is a **two-step conversational guardrail**:
 

@@ -23,7 +23,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "check:setup": "node scripts/check-setup.mjs",
+    "check:smoke": "node scripts/smoke.mjs"
   },
   "keywords": [
     "mcp",
