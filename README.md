@@ -82,13 +82,32 @@ Hawkeye Agent is built from the ground up as an **MCP server**. By connecting it
 | `check_command` | Parse installation commands (`npm install lodash express`) and run batch assessments |
 | `show_policy` | View the active enterprise security baseline |
 
-### Setup
+### Setup for VS Code (Roo Code / Cline)
 
 Add this to your IDE's MCP configuration (e.g., `.vscode/mcp.json`):
 
 ```json
 {
-  "servers": {
+  "mcpServers": {
+    "oss-hawkeye-agent": {
+      "command": "node",
+      "args": ["${workspaceFolder}/dist/server.js"]
+    }
+  }
+}
+```
+
+### Setup for Cursor / Gemini IDE
+
+Hawkeye includes built-in configurations. Just open the project in Cursor or Gemini IDE, and the MCP server will be automatically detected via `.cursor/mcp.json` or `.gemini/mcp.json`.
+
+### Setup for Claude Desktop
+
+Add this to your `claude_desktop_config.json` (replacing `<path-to>` with your actual absolute path):
+
+```json
+{
+  "mcpServers": {
     "oss-hawkeye-agent": {
       "command": "node",
       "args": ["<path-to>/oss-hawkeye-agent/dist/server.js"]

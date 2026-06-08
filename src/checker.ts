@@ -8,6 +8,20 @@ import type {
 import { getVersionInfo, getDependencies, getScorecard, depsDevUrl } from './api/deps-dev.js';
 import { queryVulnerabilities } from './api/osv.js';
 
+function osvSearchUrl(ecosystem: string, packageName: string): string {
+  const ecosystemMap: Record<string, string> = {
+    NPM: 'npm',
+    PYPI: 'PyPI',
+    CARGO: 'crates.io',
+    GO: 'Go',
+    RUBYGEMS: 'RubyGems',
+    NUGET: 'NuGet',
+    MAVEN: 'Maven',
+  };
+  const osvEco = ecosystemMap[ecosystem.toUpperCase()] ?? ecosystem;
+  return `https://osv.dev/list?ecosystem=${encodeURIComponent(osvEco)}&q=${encodeURIComponent(packageName)}`;
+}
+
 // ─── OpenSSF Scorecard Official Severity Weights (PRD §2.2) ──────────────────
 
 const SCORECARD_SEVERITY: Record<string, ScorecardOfficialSeverity> = {
@@ -173,7 +187,10 @@ export async function checkPackage(
     name: c.name,
     score: c.score,
     officialSeverity: getScorecardSeverity(c.name),
-    documentation: { shortDescription: c.documentation.shortDescription },
+    documentation: {
+      shortDescription: c.documentation.shortDescription,
+      url: c.documentation.url,
+    },
   }));
 
   // ── Build violations ──────────────────────────────────────────────────────
@@ -254,6 +271,8 @@ export async function checkPackage(
     violations,
 
     depsDevUrl: depsDevUrl(ecosystem, packageName, resolvedVersion),
+    osvQueryUrl: osvSearchUrl(ecosystem, packageName),
+    scorecardSourceUrl: scorecardData?.projectUrl ?? null,
   };
 }
 
