@@ -33,6 +33,10 @@
     "security",
     "compliance"
   ],
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  },
   "type": "module",
   "dependencies": {
     "@types/node": "^25.9.1",
