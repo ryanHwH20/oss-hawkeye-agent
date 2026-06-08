@@ -152,6 +152,7 @@ export async function getScorecard(
   return {
     date: projData.scorecard.date,
     overallScore: projData.scorecard.overallScore,
+    projectUrl,
     checks: projData.scorecard.checks,
   };
 }

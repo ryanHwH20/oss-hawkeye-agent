@@ -12,13 +12,20 @@
     "url": "https://github.com/ryanHwH20/oss-hawkeye-agent/issues"
   },
   "homepage": "https://github.com/ryanHwH20/oss-hawkeye-agent#readme",
+  "files": [
+    "dist",
+    "policy.json",
+    "SKILL.md"
+  ],
   "main": "dist/server.js",
   "bin": {
     "hawkeye": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "check:setup": "node scripts/check-setup.mjs",
+    "check:smoke": "node scripts/smoke.mjs"
   },
   "keywords": [
     "mcp",
@@ -33,11 +40,11 @@
     "@types/node": "^25.9.1",
     "cvss": "^1.0.5",
     "semver": "^7.8.1",
-    "typescript": "^6.0.3",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/cvss": "^1.0.3",
-    "@types/semver": "^7.7.1"
+    "@types/semver": "^7.7.1",
+    "typescript": "^6.0.3"
   }
 }

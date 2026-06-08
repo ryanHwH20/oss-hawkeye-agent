@@ -227,6 +227,7 @@ function licenseSection(r: CheckResult): string[] {
 
   const lines = [
     '## 📜 License',
+    `_Source: [deps.dev package metadata](${r.depsDevUrl})_`,
     '',
     `* **Declared:** \`${declared}\``,
     `* **Status:** ${status}`,
@@ -246,7 +247,7 @@ function licenseSection(r: CheckResult): string[] {
 function vulnerabilitySection(r: CheckResult): string[] {
   const lines: string[] = [
     '## 🐛 Vulnerabilities',
-    '_Source: osv.dev_',
+    `_Source: [OSV package query](${r.osvQueryUrl})_`,
     '',
   ];
 
@@ -283,10 +284,13 @@ function vulnerabilitySection(r: CheckResult): string[] {
 
 function scorecardSection(r: CheckResult): string[] {
   const scoreStr = r.scorecardScore !== null ? `${scoreLight(r.scorecardScore)}` : '⚪ N/A';
+  const scorecardSource = r.scorecardSourceUrl
+    ? `[deps.dev project scorecard API](${r.scorecardSourceUrl})`
+    : `[deps.dev package page](${r.depsDevUrl})`;
 
   const lines: string[] = [
     `## 📊 OpenSSF Scorecard (${scoreStr})`,
-    '_Source: api.securityscorecards.dev_',
+    `_Source: ${scorecardSource}_`,
     '',
   ];
 
@@ -296,14 +300,13 @@ function scorecardSection(r: CheckResult): string[] {
     return lines;
   }
 
-  lines.push('<details>');
-  lines.push('<summary>▶ Expand Detailed Scorecard Metrics</summary>');
+  lines.push('### Detailed Scorecard Metrics');
   lines.push('');
   lines.push('> 💡 **Ecosystem Context:**');
   lines.push('> Large projects (e.g. Spring Boot, React) may score 0 in metrics like `Code-Review` if they use custom CI/CD or internal workflows instead of GitHub branch protections. This is common for enterprise repositories and can often be safely ignored.');
   lines.push('');
-  lines.push('| Metric | Severity | Score |');
-  lines.push('| :--- | :--- | :--- |');
+  lines.push('| Metric | Severity | Score | Reference |');
+  lines.push('| :--- | :--- | :--- | :--- |');
 
   const sevWeight = (s: string) => {
     switch (s) {
@@ -321,10 +324,10 @@ function scorecardSection(r: CheckResult): string[] {
 
   for (const c of sortedChecks) {
     const score = c.score < 0 ? '—' : `${scoreLight(c.score)}`;
-    lines.push(`| ${c.name} | ${officialSev(c.officialSeverity)} | ${score} |`);
+    const ref = c.documentation.url ? `[Doc](${c.documentation.url})` : '—';
+    lines.push(`| ${c.name} | ${officialSev(c.officialSeverity)} | ${score} | ${ref} |`);
   }
   lines.push('');
-  lines.push('</details>');
   lines.push('');
 
   return lines;
@@ -339,16 +342,15 @@ function sbomSection(r: CheckResult): string[] {
 
   const lines: string[] = [
     `## 📦 SBOM — ${total} Dependencies`,
-    '_Source: deps.dev_',
+    `_Source: [deps.dev dependency graph](${r.depsDevUrl})_`,
     '',
   ];
 
-  lines.push('<details>');
   if (isAllClean) {
-    lines.push(`<summary>✅ <strong>SBOM Clean:</strong> All ${total} dependencies are compliant and free of known vulnerabilities (Click to expand).</summary>`);
+    lines.push(`✅ **SBOM Clean:** All ${total} dependencies are compliant and free of known vulnerabilities.`);
     lines.push('');
   } else {
-    lines.push(`<summary>❌ <strong>SBOM Violation:</strong> Contains known vulnerabilities or restricted licenses (Click to expand).</summary>`);
+    lines.push(`❌ **SBOM Violation:** Contains known vulnerabilities or restricted licenses.`);
     lines.push('');
     if (flaggedCount > 0) {
       lines.push(`> [!CAUTION]`);
@@ -386,7 +388,6 @@ function sbomSection(r: CheckResult): string[] {
   }
 
   lines.push('');
-  lines.push('</details>');
   lines.push('');
   
   return lines;

@@ -26,7 +26,7 @@ export interface ScorecardCheck {
   name: string;
   score: number;
   officialSeverity: ScorecardOfficialSeverity;
-  documentation: { shortDescription: string };
+  documentation: { shortDescription: string; url?: string };
 }
 
 export interface DepLicense {
@@ -66,6 +66,8 @@ export interface CheckResult {
   depLicenses: DepLicense[];
   violations: Violation[];
   depsDevUrl: string;
+  osvQueryUrl: string;
+  scorecardSourceUrl: string | null;
 }
 
 // ─── deps.dev API response types ─────────────────────────────────────────────
@@ -93,10 +95,11 @@ export interface DepsDevDepsResponse {
 export interface DepsDevScorecardResponse {
   date: string;
   overallScore: number;
+  projectUrl: string;
   checks: Array<{
     name: string;
     score: number;
     reason: string;
-    documentation: { shortDescription: string };
+    documentation: { shortDescription: string; url?: string };
   }>;
 }
