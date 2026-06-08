@@ -54,7 +54,7 @@ npm install
 npm run build
 ```
 
-### 1.5 One-Time Developer Setup (Recommended)
+### 2. One-Time Developer Setup (Recommended)
 
 To make new Copilot sessions consistently use Hawkeye Skill + CLI SOP, complete this once per machine:
 
@@ -80,7 +80,7 @@ npm run check:smoke
 
 If both pass, new sessions should reliably trigger Hawkeye flow on install commands.
 
-### 2. Single Package Audit (CLI)
+### 3. Single Package Audit (CLI)
 
 You can run the built CLI directly to get a full enterprise-grade security report:
 
@@ -209,7 +209,7 @@ We're building Hawkeye Agent into the definitive shift-left security tool for de
 - [x] Automated remediation snippets (upgrade paths, overrides, AI-guided alternatives)
 - [x] CLI with standard exit codes
 - [x] Policy-as-Code via `.audit-agent.yaml`
-- [x] Publish to NPM (`oss-hawkeye-agent@1.0.1`)
+- [x] Publish to NPM (`oss-hawkeye-agent@1.0.2`)
 - [x] In-memory caching layer with TTL for API responses
 - [x] Setup and smoke checks (`check:setup`, `check:smoke`)
 
