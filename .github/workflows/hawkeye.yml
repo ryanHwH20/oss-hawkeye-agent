@@ -1,33 +1,33 @@
-name: Hawkeye Agent Audit
+name: PR Validation
 
 on:
   pull_request:
-    paths:
-      - 'package.json'
-      - 'package-lock.json'
-      - 'pom.xml'
-      - 'requirements.txt'
+
+permissions:
+  contents: read
 
 jobs:
-  hawkeye-audit:
-    name: Dependency Compliance Audit
+  validate:
+    name: Build and Validation Checks
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js (Hawkeye Runtime)
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Install Hawkeye Agent
-        run: npm install -g oss-hawkeye-agent
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Audit New Dependencies
-        # Replace this with a script to extract new dependencies from PR diffs
-        # and pipe them into Hawkeye Agent for auditing.
-        run: |
-          echo "Running OSS Security Audit..."
-          # You can place your custom .audit-agent.yaml in the repo root
-          hawkeye NPM express 5.2.1
+      - name: Build
+        run: npm run build
+
+      - name: Setup checks
+        run: npm run check:setup
+
+      - name: Smoke checks
+        run: npm run check:smoke
