@@ -9,7 +9,7 @@ This repository enforces a security-first package workflow.
 - Direct install now (bypass)
 
 2. If user chooses Security report first:
-- Use MCP server `oss-hawkeye-agent` tools.
+- Run Hawkeye CLI checks from this repository.
 - Return the full Hawkeye report format from `.github/skills/hawkeye-agent/SKILL.md`.
 
 3. If user chooses Direct install now:

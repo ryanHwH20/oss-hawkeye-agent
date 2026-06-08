@@ -18,7 +18,6 @@ Please delete options that are not relevant.
 Please describe the tests that you ran to verify your changes.
 
 - [ ] Local CLI execution
-- [ ] Tested via MCP interface
 - [ ] Other: 
 
 ## Checklist:

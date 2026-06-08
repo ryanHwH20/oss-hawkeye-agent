@@ -17,18 +17,17 @@
     "policy.json",
     "SKILL.md"
   ],
-  "main": "dist/server.js",
+  "main": "dist/checker.js",
   "bin": {
-    "hawkeye": "./dist/cli.js"
+    "hawkeye": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/cli.js",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs"
   },
   "keywords": [
-    "mcp",
     "oss",
     "license",
     "security",
@@ -36,7 +35,6 @@
   ],
   "type": "module",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/node": "^25.9.1",
     "cvss": "^1.0.5",
     "semver": "^7.8.1",
