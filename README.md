@@ -1,3 +1,4 @@
+
 # 🎾 Hawkeye Agent
 
 **The indisputable, high-precision line-judge for your software supply chain.**
@@ -5,6 +6,7 @@
 [![NPM Version](https://img.shields.io/npm/v/oss-hawkeye-agent?style=flat-square)](https://www.npmjs.com/package/oss-hawkeye-agent)
 [![License](https://img.shields.io/github/license/ryanHwH20/oss-hawkeye-agent?style=flat-square)](https://github.com/ryanHwH20/oss-hawkeye-agent/blob/main/LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/ryanHwH20/oss-hawkeye-agent/hawkeye.yml?branch=main&style=flat-square)](https://github.com/ryanHwH20/oss-hawkeye-agent/actions)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ryanHwH20/oss-hawkeye-agent/badge?style=flat-square)](https://scorecard.dev/viewer/?uri=github.com/ryanHwH20/oss-hawkeye-agent)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 
 In professional tennis, the Hawk-Eye system provides millimeter-accurate, indisputable judgments on whether a ball is in or out. In the modern software supply chain, developers need an equally authoritative system to judge whether an open-source dependency is "safe to use" or "out of bounds."
