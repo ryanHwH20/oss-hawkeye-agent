@@ -42,14 +42,15 @@ function officialSev(s: ScorecardOfficialSeverity): string {
 // ─── Section: Verdict Banner ──────────────────────────────────────────────────
 
 function verdictBanner(r: CheckResult): string[] {
-  const hasBlock = r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
   const hasAdvisory = r.violations.some(v => v.severity === 'LOW');
 
-  const verdict = hasBlock
+  const verdict = r.verdict === 'BLOCKED'
     ? '❌  BLOCKED — Security Policy Violation'
-    : hasAdvisory
-      ? '✅  APPROVED — With Advisories'
-      : '✅  APPROVED — Fully Compliant';
+    : r.verdict === 'UNKNOWN'
+      ? '⚠️  UNVERIFIED — Audit Could Not Be Completed'
+      : hasAdvisory
+        ? '✅  APPROVED — With Advisories'
+        : '✅  APPROVED — Fully Compliant';
 
   const today = new Date().toLocaleDateString('en-US');
 
@@ -59,6 +60,24 @@ function verdictBanner(r: CheckResult): string[] {
     `> ### ${verdict}`,
     '',
     `Policy: **${policy.organizationName} · Security Baseline** | Date: \`${today}\``,
+    '',
+    '---',
+    '',
+  ];
+}
+
+// ─── Section: Unverified Sources (fail-closed disclosure) ─────────────────────
+
+function unverifiedBanner(r: CheckResult): string[] {
+  if (r.unverified.length === 0) return [];
+
+  return [
+    '> [!CAUTION]',
+    '> **Incomplete Audit — Failing Closed.** The following data sources could not be reached, so this package could **not** be fully verified:',
+    '>',
+    ...r.unverified.map(u => `> - ${u}`),
+    '>',
+    '> A security guardrail does not treat an unverifiable package as safe. Re-run once the sources are reachable, or proceed only with explicit, documented risk acceptance.',
     '',
     '---',
     '',
@@ -85,17 +104,27 @@ function versionWarning(r: CheckResult): string[] {
 function quickReference(r: CheckResult): string[] {
   const hasBlock = r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
 
+  // Which sources were unreachable — used to avoid claiming "clean" when we
+  // simply could not look.
+  const licenseUnverified = r.unverified.some(u => u.startsWith('Package metadata'));
+  const vulnUnverified = r.unverified.some(u => u.startsWith('Vulnerabilities'));
+  const scorecardUnverified = r.unverified.some(u => u.startsWith('OpenSSF'));
+
   const licStatus = r.rootFlaggedLicenses.length > 0
     ? `❌ Blocked (\`${r.rootFlaggedLicenses.join(', ')}\`)`
-    : `✅ \`${r.licenses.join(', ') || 'Unknown'}\` — Compliant`;
+    : licenseUnverified
+      ? '⚪ Unverified — source unreachable'
+      : `✅ \`${r.licenses.join(', ') || 'Unknown'}\` — Compliant`;
 
-  const vulnStatus = r.vulnerabilities.length === 0
-    ? '✅ No Known Vulnerabilities'
-    : `❌ ${r.vulnerabilities.length} Vulns (${r.vulnerabilities.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH').length} High/Critical)`;
+  const vulnStatus = vulnUnverified
+    ? '⚪ Unverified — OSV unreachable'
+    : r.vulnerabilities.length === 0
+      ? '✅ No Known Vulnerabilities'
+      : `❌ ${r.vulnerabilities.length} Vulns (${r.vulnerabilities.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH').length} High/Critical)`;
 
   const scoreNum = r.scorecardScore;
   const scoreStatus = scoreNum === null
-    ? '⚪ N/A'
+    ? (scorecardUnverified ? '⚪ Unverified — source unreachable' : '⚪ N/A')
     : scoreNum >= 7
       ? `🟢 ${scoreNum.toFixed(1)}/10`
       : scoreNum >= 4
@@ -104,9 +133,11 @@ function quickReference(r: CheckResult): string[] {
 
   const policyStatus = hasBlock
     ? `❌ ${r.violations.filter(v => v.severity === 'HIGH').length} Blocking Issues`
-    : r.violations.filter(v => v.severity === 'LOW').length > 0
-      ? `⚠️ ${r.violations.filter(v => v.severity === 'LOW').length} Advisories`
-      : '✅ Compliant';
+    : r.verdict === 'UNKNOWN'
+      ? '⚠️ Unverified — failing closed'
+      : r.violations.filter(v => v.severity === 'LOW').length > 0
+        ? `⚠️ ${r.violations.filter(v => v.severity === 'LOW').length} Advisories`
+        : '✅ Compliant';
 
   return [
     '## Quick Reference',
@@ -250,6 +281,14 @@ function vulnerabilitySection(r: CheckResult): string[] {
     `_Source: [OSV package query](${r.osvQueryUrl})_`,
     '',
   ];
+
+  // Never present "no vulnerabilities" when OSV could not actually be queried.
+  if (r.unverified.some(u => u.startsWith('Vulnerabilities'))) {
+    lines.push('> [!CAUTION]');
+    lines.push('> **Could not verify.** OSV was unreachable (network error, rate limit, or outage), so the vulnerability status of this version is **unknown** — not confirmed clean.');
+    lines.push('');
+    return lines;
+  }
 
   if (r.vulnerabilities.length === 0) {
     lines.push('✅ No known vulnerabilities detected for this version.');
@@ -542,6 +581,7 @@ function actionableBlock(r: CheckResult): string[] {
 export function formatResult(r: CheckResult): string {
   return [
     ...verdictBanner(r),
+    ...unverifiedBanner(r),
     ...versionWarning(r),
     ...quickReference(r),
     ...findingsAndActions(r),
@@ -556,20 +596,20 @@ export function formatResult(r: CheckResult): string {
 // ─── Batch Command Verdict ────────────────────────────────────────────────────
 
 export function formatCommandVerdict(results: CheckResult[]): string {
-  const failCount = results.filter(r =>
-    r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM')
-  ).length;
+  const failCount = results.filter(r => r.verdict === 'BLOCKED').length;
+  const unknownCount = results.filter(r => r.verdict === 'UNKNOWN').length;
   const warnCount = results.filter(r =>
-    !r.violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM') &&
-    r.violations.some(v => v.severity === 'LOW')
+    r.verdict === 'SAFE' && r.violations.some(v => v.severity === 'LOW')
   ).length;
-  const passCount = results.length - failCount - warnCount;
+  const passCount = results.length - failCount - unknownCount - warnCount;
 
   const overall = failCount > 0
     ? `> ❌ **${failCount} Packages Blocked** — You must submit an exception request and gain Security Team approval before installation.`
-    : warnCount > 0
-      ? `> ⚠️ **All packages approved for installation**, but ${warnCount} packages have advisories.`
-      : `> ✅ **All ${results.length} packages successfully passed the audit.**`;
+    : unknownCount > 0
+      ? `> ⚠️ **${unknownCount} Packages Unverified** — data sources were unreachable. Failing closed: do not install until they can be audited.`
+      : warnCount > 0
+        ? `> ⚠️ **All packages approved for installation**, but ${warnCount} packages have advisories.`
+        : `> ✅ **All ${results.length} packages successfully passed the audit.**`;
 
   return [
     '## Batch Audit Summary',
@@ -579,6 +619,7 @@ export function formatCommandVerdict(results: CheckResult[]): string {
     `| Total Packages | ${results.length} |`,
     `| ✅ Passed | ${passCount} |`,
     `| ⚠️ Advisory | ${warnCount} |`,
+    `| ⚪ Unverified | ${unknownCount} |`,
     `| ❌ Blocked | ${failCount} |`,
     '',
     overall,
