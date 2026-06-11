@@ -24,6 +24,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs"
   },
@@ -47,6 +49,7 @@
   "devDependencies": {
     "@types/cvss": "^1.0.3",
     "@types/semver": "^7.7.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }

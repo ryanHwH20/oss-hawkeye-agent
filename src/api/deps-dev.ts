@@ -2,6 +2,7 @@ import type {
   DepsDevVersionInfo,
   DepsDevDepsResponse,
   DepsDevScorecardResponse,
+  SourceResult,
 } from '../types.js';
 
 const BASE = 'https://api.deps.dev/v3alpha';
@@ -42,18 +43,35 @@ function cacheSet(key: string, value: unknown): void {
 
 // ─── Fetch Helper ─────────────────────────────────────────────────────────────
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+/**
+ * Fetch JSON while distinguishing "source unreachable" from "no such resource".
+ *
+ * - `status: 'unavailable'` — network error, rate limit (429), or server error
+ *   (5xx). We genuinely could not consult the source; callers must fail closed.
+ * - `status: 'ok', value: null` — a clean 4xx (e.g. 404). The source answered:
+ *   the resource does not exist. This is a real, trustworthy negative.
+ * - `status: 'ok', value: T` — a successful response.
+ */
+async function fetchJson<T>(url: string): Promise<SourceResult<T | null>> {
   const cached = cacheGet<T>(url);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) return { value: cached, status: 'ok' };
 
   try {
     const res = await fetch(url);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // 429 (rate limited) and 5xx (server) mean we couldn't really check.
+      if (res.status === 429 || res.status >= 500) {
+        return { value: null, status: 'unavailable' };
+      }
+      // 404 and other 4xx are authoritative "not found" answers.
+      return { value: null, status: 'ok' };
+    }
     const data = (await res.json()) as T;
     cacheSet(url, data);
-    return data;
+    return { value: data, status: 'ok' };
   } catch {
-    return null;
+    // DNS failure, connection reset, timeout, malformed JSON, etc.
+    return { value: null, status: 'unavailable' };
   }
 }
 
@@ -61,18 +79,22 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 
 /**
  * Get version info for a package (licenses, advisory count, etc.)
+ * The returned `status` reflects whether deps.dev could actually be reached.
  */
 export async function getVersionInfo(
   system: string,
   name: string,
   version?: string
-): Promise<DepsDevVersionInfo | null> {
+): Promise<SourceResult<DepsDevVersionInfo | null>> {
   // If no version specified, get the default version first
   if (!version) {
     const pkgUrl = `${BASE}/systems/${encodeURIComponent(system)}/packages/${encodeURIComponent(name)}`;
-    const pkgData = await fetchJson<{ versions: Array<{ versionKey: { version: string }; isDefault?: boolean }> }>(pkgUrl);
-    if (!pkgData?.versions?.length) return null;
-    const defaultVer = pkgData.versions.find(v => v.isDefault) ?? pkgData.versions[pkgData.versions.length - 1];
+    const pkgRes = await fetchJson<{ versions: Array<{ versionKey: { version: string }; isDefault?: boolean }> }>(pkgUrl);
+    // Propagate unreachability — don't mask a network failure as "not found".
+    if (pkgRes.status === 'unavailable') return { value: null, status: 'unavailable' };
+    const versions = pkgRes.value?.versions;
+    if (!versions?.length) return { value: null, status: 'ok' };
+    const defaultVer = versions.find(v => v.isDefault) ?? versions[versions.length - 1];
     version = defaultVer.versionKey.version;
   }
 
@@ -87,25 +109,29 @@ export async function getDependencies(
   system: string,
   name: string,
   version: string
-): Promise<DepsDevDepsResponse | null> {
+): Promise<SourceResult<DepsDevDepsResponse | null>> {
   const url = `${BASE}/systems/${encodeURIComponent(system)}/packages/${encodeURIComponent(name)}/versions/${encodeURIComponent(version)}:dependencies`;
   return fetchJson<DepsDevDepsResponse>(url);
 }
 
 /**
- * Get OpenSSF Scorecard for a package via deps.dev project data
+ * Get OpenSSF Scorecard for a package via deps.dev project data.
+ * `status: 'unavailable'` distinguishes "deps.dev unreachable" from the
+ * legitimate "this project simply has no scorecard" (status 'ok', value null).
  */
 export async function getScorecard(
   system: string,
   name: string,
   version: string
-): Promise<DepsDevScorecardResponse | null> {
+): Promise<SourceResult<DepsDevScorecardResponse | null>> {
   // 1. Get version info to find the SOURCE_REPO link
   const versionUrl = `${BASE}/systems/${encodeURIComponent(system)}/packages/${encodeURIComponent(name)}/versions/${encodeURIComponent(version)}`;
-  const versionData = await fetchJson<{
+  const versionRes = await fetchJson<{
     links?: Array<{ label: string; url: string }>;
     relatedProjects?: Array<{ projectKey: { id: string }; relationType: string }>;
   }>(versionUrl);
+  if (versionRes.status === 'unavailable') return { value: null, status: 'unavailable' };
+  const versionData = versionRes.value;
 
   // 2. Try to extract project ID from relatedProjects first (most reliable)
   let projectId: string | null = null;
@@ -130,11 +156,12 @@ export async function getScorecard(
     }
   }
 
-  if (!projectId) return null;
+  // No source repo → legitimately no scorecard (not a failure).
+  if (!projectId) return { value: null, status: 'ok' };
 
   // 4. Query the GetProject endpoint for scorecard
   const projectUrl = `${BASE}/projects/${encodeURIComponent(projectId)}`;
-  const projData = await fetchJson<{
+  const projRes = await fetchJson<{
     scorecard?: {
       date: string;
       overallScore: number;
@@ -146,14 +173,19 @@ export async function getScorecard(
       }>;
     };
   }>(projectUrl);
+  if (projRes.status === 'unavailable') return { value: null, status: 'unavailable' };
 
-  if (!projData?.scorecard) return null;
+  const scorecard = projRes.value?.scorecard;
+  if (!scorecard) return { value: null, status: 'ok' };
 
   return {
-    date: projData.scorecard.date,
-    overallScore: projData.scorecard.overallScore,
-    projectUrl,
-    checks: projData.scorecard.checks,
+    value: {
+      date: scorecard.date,
+      overallScore: scorecard.overallScore,
+      projectUrl,
+      checks: scorecard.checks,
+    },
+    status: 'ok',
   };
 }
 

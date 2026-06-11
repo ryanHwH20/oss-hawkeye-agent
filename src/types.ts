@@ -50,6 +50,30 @@ export interface Violation {
   fixedVersions?: string[];
 }
 
+// ─── Data-source availability (fail-closed support) ─────────────────────────
+
+/**
+ * Whether an external data source was successfully consulted.
+ * `unavailable` means the source could not be reached (network error, rate
+ * limit, server error) — NOT that it returned an empty/negative answer.
+ */
+export type SourceStatus = 'ok' | 'unavailable';
+
+/** A fetched value paired with whether its source was actually reachable. */
+export interface SourceResult<T> {
+  value: T;
+  status: SourceStatus;
+}
+
+/**
+ * The overall audit verdict.
+ * - SAFE: every relevant source was consulted and nothing blocks the package.
+ * - BLOCKED: a policy violation was found.
+ * - UNKNOWN: a critical source could not be reached, so safety is unverifiable.
+ *   Treated as fail-closed (non-zero exit), never silently approved.
+ */
+export type Verdict = 'SAFE' | 'BLOCKED' | 'UNKNOWN';
+
 export interface CheckResult {
   name: string;
   version: string;
@@ -65,6 +89,9 @@ export interface CheckResult {
   depCount: { direct: number; indirect: number };
   depLicenses: DepLicense[];
   violations: Violation[];
+  verdict: Verdict;
+  /** Human-readable names of data sources that could not be verified. */
+  unverified: string[];
   depsDevUrl: string;
   osvQueryUrl: string;
   scorecardSourceUrl: string | null;

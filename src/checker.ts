@@ -65,17 +65,33 @@ export async function checkPackage(
   version: string | undefined,
   policy: Policy
 ): Promise<CheckResult> {
+  // Names of data sources we could not reach. Drives the fail-closed verdict
+  // (critical sources) and the "unverified" disclosure in the report.
+  const unverified: string[] = [];
+
   // ── Phase 1: resolve version (required before parallel fetch) ──────────────
-  const versionInfo = await getVersionInfo(ecosystem, packageName, version);
+  const versionRes = await getVersionInfo(ecosystem, packageName, version);
+  const versionInfo = versionRes.value;
   const resolvedVersion = versionInfo?.versionKey?.version ?? version ?? 'latest';
   const licenses = versionInfo?.licenses ?? [];
 
   // ── Phase 2: parallel fetch — deps + scorecard + vulns ────────────────────
-  const [depsData, scorecardData, vulnerabilities] = await Promise.all([
+  const [depsRes, scorecardRes, vulnRes] = await Promise.all([
     getDependencies(ecosystem, packageName, resolvedVersion),
     getScorecard(ecosystem, packageName, resolvedVersion),
     queryVulnerabilities(ecosystem, packageName, resolvedVersion),
   ]);
+  const depsData = depsRes.value;
+  const scorecardData = scorecardRes.value;
+  const vulnerabilities = vulnRes.value;
+
+  // Record unreachable sources. License/SBOM/vulnerabilities are *critical*:
+  // if any is unavailable we cannot honestly clear the package. Scorecard is
+  // advisory, so its absence is disclosed but does not force UNKNOWN.
+  if (versionRes.status === 'unavailable') unverified.push('Package metadata & licenses (deps.dev)');
+  if (depsRes.status === 'unavailable') unverified.push('Dependency graph / SBOM (deps.dev)');
+  if (vulnRes.status === 'unavailable') unverified.push('Vulnerabilities (OSV)');
+  if (scorecardRes.status === 'unavailable') unverified.push('OpenSSF Scorecard (deps.dev)');
 
   // ── Process dependencies ──────────────────────────────────────────────────
   const nodes = depsData?.nodes ?? [];
@@ -115,26 +131,40 @@ export async function checkPackage(
   }
 
   const allDeps = nodes.map((node, index) => ({ ...node, nodeId: index })).filter(n => n.relation !== 'SELF');
+  let depUnverifiedCount = 0;
   const depInfos = await Promise.all(
     allDeps.map(async (dep) => {
-      const [info, scorecard] = await Promise.all([
+      const [infoRes, scorecardDepRes] = await Promise.all([
         getVersionInfo(ecosystem, dep.versionKey.name, dep.versionKey.version),
         getScorecard(ecosystem, dep.versionKey.name, dep.versionKey.version),
       ]);
-      
+      const info = infoRes.value;
+
       let depVulns: import('./types.js').OsvVuln[] = [];
+      let depVulnUnavailable = false;
       if (info?.advisoryKeys && info.advisoryKeys.length > 0 && policy.blockVulnerabilities) {
-        depVulns = await queryVulnerabilities(ecosystem, dep.versionKey.name, dep.versionKey.version);
+        const depVulnRes = await queryVulnerabilities(ecosystem, dep.versionKey.name, dep.versionKey.version);
+        depVulns = depVulnRes.value;
+        depVulnUnavailable = depVulnRes.status === 'unavailable';
       }
 
-      return { 
-        dep, 
-        licenses: info?.licenses ?? [], 
-        scorecardScore: scorecard?.overallScore ?? null,
-        depVulns
+      // A dep is "unverified" when its licenses or its advisory lookup could
+      // not be reached — that leaves a real gap in the SBOM assessment.
+      const unverifiedDep = infoRes.status === 'unavailable' || depVulnUnavailable;
+
+      return {
+        dep,
+        licenses: info?.licenses ?? [],
+        scorecardScore: scorecardDepRes.value?.overallScore ?? null,
+        depVulns,
+        unverifiedDep,
       };
     })
   );
+  depUnverifiedCount = depInfos.filter(d => d.unverifiedDep).length;
+  if (depUnverifiedCount > 0) {
+    unverified.push(`SBOM (${depUnverifiedCount} of ${allDeps.length} dependencies unverified)`);
+  }
 
   const depLicenses: DepLicense[] = [];
   const sbomViolations: Violation[] = [];
@@ -254,6 +284,22 @@ export async function checkPackage(
 
 
 
+  // ── Compute fail-closed verdict ───────────────────────────────────────────
+  // A policy violation always blocks. Otherwise, if any *critical* source
+  // (licenses, SBOM, or vulnerabilities) was unreachable, we cannot honestly
+  // approve the package — return UNKNOWN, which callers treat as non-passing.
+  const hasBlocking = violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
+  const criticalUnavailable =
+    versionRes.status === 'unavailable' ||
+    depsRes.status === 'unavailable' ||
+    vulnRes.status === 'unavailable' ||
+    depUnverifiedCount > 0;
+  const verdict: import('./types.js').Verdict = hasBlocking
+    ? 'BLOCKED'
+    : criticalUnavailable
+      ? 'UNKNOWN'
+      : 'SAFE';
+
   return {
     name: packageName,
     version: resolvedVersion,
@@ -269,6 +315,8 @@ export async function checkPackage(
     depCount: { direct: directDeps.length, indirect: indirectDeps.length },
     depLicenses,
     violations,
+    verdict,
+    unverified,
 
     depsDevUrl: depsDevUrl(ecosystem, packageName, resolvedVersion),
     osvQueryUrl: osvSearchUrl(ecosystem, packageName),

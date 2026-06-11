@@ -11,9 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenSSF Scorecard, CodeQL, and Dependency Review GitHub Actions workflows.
 - `CHANGELOG.md`, `CODEOWNERS`, issue-template chooser config, `.editorconfig`, and `.nvmrc`.
 - `scripts/seed-github.sh` to reproduce the project's labels, milestones, and planning issues.
+- Vitest test suite with the first unit tests covering the fail-closed verdict.
 
 ### Changed
 - Pinned all GitHub Actions to commit SHAs (kept current via Dependabot).
+
+### Fixed
+- **Fail-closed audit verdict (#7).** Network errors, rate limits (HTTP 429),
+  and server errors (5xx) from deps.dev/OSV are no longer silently treated as
+  "no findings." The audit now distinguishes `SAFE` / `BLOCKED` / `UNKNOWN`,
+  reports which data sources could not be verified, never claims a package is
+  clean when a source was unreachable, and exits non-zero on `UNKNOWN`.
 
 ## [1.0.2] - 2025
 

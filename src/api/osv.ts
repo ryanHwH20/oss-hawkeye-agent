@@ -1,4 +1,4 @@
-import type { OsvVuln } from '../types.js';
+import type { OsvVuln, SourceResult } from '../types.js';
 import cvss from 'cvss';
 
 const OSV_API = 'https://api.osv.dev/v1';
@@ -81,13 +81,18 @@ function extractFixedVersions(vuln: OsvVulnEntry): string[] {
 }
 
 /**
- * Query OSV for vulnerabilities affecting a specific package version
+ * Query OSV for vulnerabilities affecting a specific package version.
+ *
+ * The returned `status` distinguishes a trustworthy "no vulnerabilities"
+ * (HTTP 200 with an empty list) from "we couldn't reach OSV" (network error,
+ * rate limit, or server error). Callers must NOT report a package as clean
+ * when the status is 'unavailable'.
  */
 export async function queryVulnerabilities(
   ecosystem: string,
   packageName: string,
   version: string
-): Promise<OsvVuln[]> {
+): Promise<SourceResult<OsvVuln[]>> {
   // Map our system names to OSV ecosystem names
   const ecosystemMap: Record<string, string> = {
     NPM: 'npm',
@@ -111,11 +116,18 @@ export async function queryVulnerabilities(
       }),
     });
 
-    if (!res.ok) return [];
-    const data = (await res.json()) as OsvQueryResponse;
-    if (!data.vulns?.length) return [];
+    // 429 (rate limited) and 5xx (server) mean we couldn't really check.
+    if (res.status === 429 || res.status >= 500) {
+      return { value: [], status: 'unavailable' };
+    }
+    // Other non-2xx (e.g. 400 for an unknown ecosystem) is an authoritative
+    // "nothing to report" rather than an outage.
+    if (!res.ok) return { value: [], status: 'ok' };
 
-    return data.vulns.map((v) => {
+    const data = (await res.json()) as OsvQueryResponse;
+    if (!data.vulns?.length) return { value: [], status: 'ok' };
+
+    const vulns = data.vulns.map((v) => {
       const { level, score } = extractSeverity(v);
       return {
         id: v.id,
@@ -127,7 +139,8 @@ export async function queryVulnerabilities(
         fixedVersions: extractFixedVersions(v),
       };
     });
+    return { value: vulns, status: 'ok' };
   } catch {
-    return [];
+    return { value: [], status: 'unavailable' };
   }
 }
