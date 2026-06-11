@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & Ideas (Discussions)
+    url: https://github.com/ryanHwH20/oss-hawkeye-agent/discussions
+    about: Have a question, an idea, or want to share how you use Hawkeye? Start a discussion — we'd love to hear from you.
+  - name: 🔒 Report a Security Vulnerability
+    url: https://github.com/ryanHwH20/oss-hawkeye-agent/security/advisories/new
+    about: Please report security issues privately here instead of opening a public issue.
