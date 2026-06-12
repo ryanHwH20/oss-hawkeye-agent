@@ -9,5 +9,7 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
     environment: 'node',
+    // Make exponential backoff instant so retry paths don't slow the suite.
+    env: { HAWKEYE_RETRY_BASE_MS: '0' },
   },
 });

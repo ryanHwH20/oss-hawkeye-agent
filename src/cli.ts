@@ -8,7 +8,7 @@ async function main() {
   if (args.length < 2) {
     console.error('Usage: hawkeye <system> <package> [version]');
     console.error('Example: hawkeye NPM express 5.2.1');
-    process.exit(1);
+    process.exit(2); // usage error — not a policy block
   }
 
   const system = args[0].toUpperCase();
@@ -37,6 +37,9 @@ async function main() {
 }
 
 main().catch(err => {
+  // Exit codes: 0 = pass, 1 = policy block / unverifiable (fail-closed),
+  // 2 = the tool itself failed to run. Keeping these distinct lets CI tell a
+  // genuinely blocked package apart from a broken audit.
   console.error('An unexpected error occurred:', err);
-  process.exit(1);
+  process.exit(2);
 });

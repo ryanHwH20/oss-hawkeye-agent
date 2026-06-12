@@ -4,6 +4,7 @@ import type {
   DepsDevScorecardResponse,
   SourceResult,
 } from '../types.js';
+import { resilientFetch } from './http.js';
 
 const BASE = 'https://api.deps.dev/v3alpha';
 
@@ -57,7 +58,7 @@ async function fetchJson<T>(url: string): Promise<SourceResult<T | null>> {
   if (cached !== undefined) return { value: cached, status: 'ok' };
 
   try {
-    const res = await fetch(url);
+    const res = await resilientFetch(url);
     if (!res.ok) {
       // 429 (rate limited) and 5xx (server) mean we couldn't really check.
       if (res.status === 429 || res.status >= 500) {
