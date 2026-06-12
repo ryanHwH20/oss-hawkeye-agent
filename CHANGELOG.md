@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "no findings." The audit now distinguishes `SAFE` / `BLOCKED` / `UNKNOWN`,
   reports which data sources could not be verified, never claims a package is
   clean when a source was unreachable, and exits non-zero on `UNKNOWN`.
+- **Request timeouts and retries (#8).** All deps.dev/OSV requests now run
+  through a resilient HTTP layer: a 10s per-attempt timeout (no more hanging on
+  a stuck connection) and exponential-backoff retry on network errors, 429, and
+  5xx. CLI exit codes are now distinct: `0` pass, `1` policy block / unverifiable,
+  `2` the tool itself failed to run (usage or unexpected error).
 
 ## [1.0.2] - 2025
 

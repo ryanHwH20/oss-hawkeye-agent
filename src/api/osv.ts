@@ -1,4 +1,5 @@
 import type { OsvVuln, SourceResult } from '../types.js';
+import { resilientFetch } from './http.js';
 import cvss from 'cvss';
 
 const OSV_API = 'https://api.osv.dev/v1';
@@ -107,7 +108,7 @@ export async function queryVulnerabilities(
   const osvEcosystem = ecosystemMap[ecosystem.toUpperCase()] ?? ecosystem;
 
   try {
-    const res = await fetch(`${OSV_API}/query`, {
+    const res = await resilientFetch(`${OSV_API}/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
