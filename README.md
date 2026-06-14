@@ -195,40 +195,14 @@ policy:
 
 ## 🗺️ Roadmap
 
-We're building Hawkeye Agent into the definitive shift-left security tool for developers. Here's where we're headed:
+Our strategy and positioning live in **[docs/VISION.md](docs/VISION.md)**; the live, issue-linked roadmap is in **[docs/ROADMAP.md](docs/ROADMAP.md)**. At a glance:
 
-### ✅ Shipped (v1.0)
-
-- [x] Single package audit across 7 ecosystems (NPM, PyPI, Go, Cargo, Maven, NuGet, RubyGems)
-- [x] Batch command parsing (`npm install lodash express`)
-- [x] License compliance checking with configurable blocklists
-- [x] CVE vulnerability scanning via [OSV.dev](https://osv.dev)
-- [x] OpenSSF Scorecard integration with severity-weighted analysis
-- [x] Deep SBOM transitive dependency scanning
-- [x] Skill-guided CLI workflow for package audits and command checks
-- [x] AI Skill Prompt (`SKILL.md`) with loop prevention and dynamic alternative recommendations
-- [x] Conversational two-step guardrail (ask -> integrated report -> approve/install)
-- [x] Automated remediation snippets (upgrade paths, overrides, AI-guided alternatives)
-- [x] CLI with standard exit codes
-- [x] Policy-as-Code via `.audit-agent.yaml`
-- [x] Publish to NPM (`oss-hawkeye-agent@1.0.2`)
-- [x] In-memory caching layer with TTL for API responses
-- [x] Setup and smoke checks (`check:setup`, `check:smoke`)
-
-### 🔜 Next Up
-
-- [ ] **AI Install Enforcement Gate** — When AI attempts any package install command, it must pass Hawkeye audit first (or explicitly choose guarded bypass), then proceed to execution.
-- [ ] **`--json` and `--sarif` output** — Machine-readable formats for toolchain integration
-- [ ] **Comprehensive test suite** — Vitest + mocked API responses for contributor confidence
-
-### 🔮 Future
-
-- [ ] **`hawkeye scan` command** — Auto-detect and audit entire project manifests (`package.json`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pom.xml`)
-- [ ] **Official GitHub Action** — `uses: ryanHwH20/hawkeye-action@v1` with PR comment bot
-- [ ] **VS Code Extension** — Inline diagnostics and hover tooltips for risky dependencies
-- [ ] **HTML report export** — Beautiful, shareable security reports (like Lighthouse)
-- [ ] **Plugin system** — Custom policy rules (e.g., "block packages with <100 weekly downloads")
-- [ ] **Shared policy registry** — Community-maintained templates (`fintech-strict`, `startup-relaxed`)
+| Milestone | Focus | Status |
+| :--- | :--- | :--- |
+| **v1.1 — Trustworthy Core** | Fail-closed `SAFE` / `BLOCKED` / `UNKNOWN` verdict, request timeouts + retries, distinct exit codes, bounded concurrency + OSV batching, 36-test suite | ✅ Shipped |
+| **v1.2 — CI-Ready Integration** | `--json` / `--sarif` output, SPDX-aware license matching, configurable severity threshold | 🔜 In progress |
+| **v1.3 — Meet Developers Where They Are** | `hawkeye scan` (whole repo), official GitHub Action + PR comment bot, frictionless `npx` / Docker / pre-commit | 🚀 Planned |
+| **v2.0 — AI-Agent Guardrail** | MCP enforcement gate, AI-assisted remediation PRs, malware / typosquat detection, shared policy registry | 🔮 Planned |
 
 > 💡 **Have an idea?** [Open an issue](https://github.com/ryanHwH20/oss-hawkeye-agent/issues) or submit a PR — contributions are welcome!
 
