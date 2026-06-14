@@ -11,7 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenSSF Scorecard, CodeQL, and Dependency Review GitHub Actions workflows.
 - `CHANGELOG.md`, `CODEOWNERS`, issue-template chooser config, `.editorconfig`, and `.nvmrc`.
 - `scripts/seed-github.sh` to reproduce the project's labels, milestones, and planning issues.
-- Vitest test suite with the first unit tests covering the fail-closed verdict.
+- Vitest test suite (17 tests) covering the fail-closed verdict, timeout/retry,
+  bounded concurrency, OSV batch querying, and in-flight de-duplication.
+
+### Performance
+- **Bounded concurrency, OSV batching, and request de-duplication (#9).**
+  Enriching a large dependency graph no longer fans out into hundreds of
+  simultaneous requests: deps.dev calls run through a concurrency limiter
+  (default 8), transitive vulnerability lookups use OSV `/v1/querybatch` with
+  de-duplicated detail hydration instead of one request per dependency,
+  concurrent identical requests share a single in-flight fetch, and the
+  scorecard lookup reuses already-fetched version info instead of re-fetching.
 
 ### Changed
 - Pinned all GitHub Actions to commit SHAs (kept current via Dependabot).

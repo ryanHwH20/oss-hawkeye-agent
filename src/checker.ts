@@ -4,9 +4,20 @@ import type {
   DepLicense,
   Violation,
   ScorecardOfficialSeverity,
+  OsvVuln,
 } from './types.js';
-import { getVersionInfo, getDependencies, getScorecard, depsDevUrl } from './api/deps-dev.js';
-import { queryVulnerabilities } from './api/osv.js';
+import {
+  getVersionInfo,
+  getDependencies,
+  getProjectScorecard,
+  extractSourceRepoId,
+  depsDevUrl,
+} from './api/deps-dev.js';
+import { queryVulnerabilities, queryVulnerabilitiesBatch } from './api/osv.js';
+import { mapLimit } from './util/concurrency.js';
+
+// Max concurrent deps.dev requests while enriching the dependency graph.
+const DEP_CONCURRENCY = 8;
 
 function osvSearchUrl(ecosystem: string, packageName: string): string {
   const ecosystemMap: Record<string, string> = {
@@ -76,9 +87,14 @@ export async function checkPackage(
   const licenses = versionInfo?.licenses ?? [];
 
   // ── Phase 2: parallel fetch — deps + scorecard + vulns ────────────────────
+  // Reuse the version info we already fetched to locate the scorecard project,
+  // instead of re-fetching it inside the scorecard lookup.
+  const rootProjectId = extractSourceRepoId(versionInfo);
   const [depsRes, scorecardRes, vulnRes] = await Promise.all([
     getDependencies(ecosystem, packageName, resolvedVersion),
-    getScorecard(ecosystem, packageName, resolvedVersion),
+    rootProjectId
+      ? getProjectScorecard(rootProjectId)
+      : Promise.resolve({ value: null, status: 'ok' as const }),
     queryVulnerabilities(ecosystem, packageName, resolvedVersion),
   ]);
   const depsData = depsRes.value;
@@ -131,37 +147,59 @@ export async function checkPackage(
   }
 
   const allDeps = nodes.map((node, index) => ({ ...node, nodeId: index })).filter(n => n.relation !== 'SELF');
-  let depUnverifiedCount = 0;
-  const depInfos = await Promise.all(
-    allDeps.map(async (dep) => {
-      const [infoRes, scorecardDepRes] = await Promise.all([
-        getVersionInfo(ecosystem, dep.versionKey.name, dep.versionKey.version),
-        getScorecard(ecosystem, dep.versionKey.name, dep.versionKey.version),
-      ]);
-      const info = infoRes.value;
 
-      let depVulns: import('./types.js').OsvVuln[] = [];
-      let depVulnUnavailable = false;
-      if (info?.advisoryKeys && info.advisoryKeys.length > 0 && policy.blockVulnerabilities) {
-        const depVulnRes = await queryVulnerabilities(ecosystem, dep.versionKey.name, dep.versionKey.version);
-        depVulns = depVulnRes.value;
-        depVulnUnavailable = depVulnRes.status === 'unavailable';
-      }
+  // Step 1: enrich each dependency (licenses + scorecard) with bounded
+  // concurrency so a large graph cannot fan out into hundreds of simultaneous
+  // requests. Scorecard reuses the dep's own version info (no redundant fetch).
+  const depMeta = await mapLimit(allDeps, DEP_CONCURRENCY, async (dep) => {
+    const infoRes = await getVersionInfo(ecosystem, dep.versionKey.name, dep.versionKey.version);
+    const info = infoRes.value;
+    const projectId = extractSourceRepoId(info);
+    const scorecardDepRes = projectId
+      ? await getProjectScorecard(projectId)
+      : { value: null, status: 'ok' as const };
+    return {
+      dep,
+      info,
+      infoUnavailable: infoRes.status === 'unavailable',
+      scorecardScore: scorecardDepRes.value?.overallScore ?? null,
+    };
+  });
 
-      // A dep is "unverified" when its licenses or its advisory lookup could
-      // not be reached — that leaves a real gap in the SBOM assessment.
-      const unverifiedDep = infoRes.status === 'unavailable' || depVulnUnavailable;
-
-      return {
-        dep,
-        licenses: info?.licenses ?? [],
-        scorecardScore: scorecardDepRes.value?.overallScore ?? null,
-        depVulns,
-        unverifiedDep,
-      };
-    })
+  // Step 2: collect the dependencies with known advisories and resolve their
+  // vulnerabilities in a single OSV batch instead of one request each.
+  const vulnTargetIdx: number[] = [];
+  if (policy.blockVulnerabilities) {
+    depMeta.forEach((m, idx) => {
+      if (m.info?.advisoryKeys && m.info.advisoryKeys.length > 0) vulnTargetIdx.push(idx);
+    });
+  }
+  const batchRes = await queryVulnerabilitiesBatch(
+    vulnTargetIdx.map(idx => ({
+      ecosystem,
+      name: depMeta[idx].dep.versionKey.name,
+      version: depMeta[idx].dep.versionKey.version,
+    }))
   );
-  depUnverifiedCount = depInfos.filter(d => d.unverifiedDep).length;
+  const depVulnsByIdx = new Map<number, OsvVuln[]>();
+  vulnTargetIdx.forEach((idx, i) => depVulnsByIdx.set(idx, batchRes.value[i] ?? []));
+  const batchUnavailable = batchRes.status === 'unavailable';
+
+  // Step 3: assemble per-dependency results. A dep is "unverified" when its
+  // licenses or its advisory lookup could not be reached.
+  const depInfos = depMeta.map((m, idx) => {
+    const isVulnTarget = depVulnsByIdx.has(idx);
+    const depVulnUnavailable = isVulnTarget && batchUnavailable;
+    return {
+      dep: m.dep,
+      licenses: m.info?.licenses ?? [],
+      scorecardScore: m.scorecardScore,
+      depVulns: depVulnsByIdx.get(idx) ?? [],
+      unverifiedDep: m.infoUnavailable || depVulnUnavailable,
+    };
+  });
+
+  const depUnverifiedCount = depInfos.filter(d => d.unverifiedDep).length;
   if (depUnverifiedCount > 0) {
     unverified.push(`SBOM (${depUnverifiedCount} of ${allDeps.length} dependencies unverified)`);
   }

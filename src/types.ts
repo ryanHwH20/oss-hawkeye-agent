@@ -106,6 +106,7 @@ export interface DepsDevVersionInfo {
   advisoryCount?: number;
   isDefault?: boolean;
   links?: Array<{ label: string; url: string }>;
+  relatedProjects?: Array<{ projectKey: { id: string }; relationType: string }>;
 }
 
 export interface DepsDevDependency {

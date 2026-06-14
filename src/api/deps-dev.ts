@@ -53,10 +53,12 @@ function cacheSet(key: string, value: unknown): void {
  *   the resource does not exist. This is a real, trustworthy negative.
  * - `status: 'ok', value: T` — a successful response.
  */
-async function fetchJson<T>(url: string): Promise<SourceResult<T | null>> {
-  const cached = cacheGet<T>(url);
-  if (cached !== undefined) return { value: cached, status: 'ok' };
+// In-flight request de-duplication: concurrent callers asking for the same URL
+// (common with diamond-shaped dependency graphs) share a single fetch instead
+// of each issuing their own.
+const inflight = new Map<string, Promise<SourceResult<unknown>>>();
 
+async function doFetchJson<T>(url: string): Promise<SourceResult<T | null>> {
   try {
     const res = await resilientFetch(url);
     if (!res.ok) {
@@ -74,6 +76,19 @@ async function fetchJson<T>(url: string): Promise<SourceResult<T | null>> {
     // DNS failure, connection reset, timeout, malformed JSON, etc.
     return { value: null, status: 'unavailable' };
   }
+}
+
+async function fetchJson<T>(url: string): Promise<SourceResult<T | null>> {
+  const cached = cacheGet<T>(url);
+  if (cached !== undefined) return { value: cached, status: 'ok' };
+
+  const existing = inflight.get(url) as Promise<SourceResult<T | null>> | undefined;
+  if (existing) return existing;
+
+  const pending = doFetchJson<T>(url);
+  inflight.set(url, pending as Promise<SourceResult<unknown>>);
+  pending.finally(() => inflight.delete(url));
+  return pending;
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -116,51 +131,41 @@ export async function getDependencies(
 }
 
 /**
- * Get OpenSSF Scorecard for a package via deps.dev project data.
+ * Derive the deps.dev project id (e.g. "github.com/lodash/lodash") for a
+ * package from its already-fetched version info. Returns null when no source
+ * repo is known (which legitimately means "no scorecard"). Keeping this pure
+ * lets callers reuse the version info they already have instead of re-fetching.
+ */
+export function extractSourceRepoId(
+  versionData: Pick<DepsDevVersionInfo, 'links' | 'relatedProjects'> | null
+): string | null {
+  if (!versionData) return null;
+
+  // Prefer relatedProjects (most reliable).
+  const sourceProject = versionData.relatedProjects?.find(p => p.relationType === 'SOURCE_REPO');
+  if (sourceProject) return sourceProject.projectKey.id;
+
+  // Fallback: parse the SOURCE_REPO link.
+  const sourceLink = versionData.links?.find(l => l.label === 'SOURCE_REPO');
+  if (sourceLink?.url) {
+    const match = sourceLink.url.match(/(?:github\.com|gitlab\.com|bitbucket\.org)[/:]([^/]+\/[^/.]+)/);
+    const host = sourceLink.url.match(/(github\.com|gitlab\.com|bitbucket\.org)/);
+    if (match && host) return `${host[1]}/${match[1]}`;
+  }
+
+  return null;
+}
+
+/**
+ * Get the OpenSSF Scorecard for a known deps.dev project id. Callers derive the
+ * id via {@link extractSourceRepoId} from version info they already hold, so
+ * this performs a single GetProject request with no redundant version fetch.
  * `status: 'unavailable'` distinguishes "deps.dev unreachable" from the
  * legitimate "this project simply has no scorecard" (status 'ok', value null).
  */
-export async function getScorecard(
-  system: string,
-  name: string,
-  version: string
+export async function getProjectScorecard(
+  projectId: string
 ): Promise<SourceResult<DepsDevScorecardResponse | null>> {
-  // 1. Get version info to find the SOURCE_REPO link
-  const versionUrl = `${BASE}/systems/${encodeURIComponent(system)}/packages/${encodeURIComponent(name)}/versions/${encodeURIComponent(version)}`;
-  const versionRes = await fetchJson<{
-    links?: Array<{ label: string; url: string }>;
-    relatedProjects?: Array<{ projectKey: { id: string }; relationType: string }>;
-  }>(versionUrl);
-  if (versionRes.status === 'unavailable') return { value: null, status: 'unavailable' };
-  const versionData = versionRes.value;
-
-  // 2. Try to extract project ID from relatedProjects first (most reliable)
-  let projectId: string | null = null;
-  if (versionData?.relatedProjects) {
-    const sourceProject = versionData.relatedProjects.find(p => p.relationType === 'SOURCE_REPO');
-    if (sourceProject) {
-      projectId = sourceProject.projectKey.id;
-    }
-  }
-
-  // 3. Fallback: extract from links
-  if (!projectId && versionData?.links) {
-    const sourceLink = versionData.links.find(l => l.label === 'SOURCE_REPO');
-    if (sourceLink?.url) {
-      const match = sourceLink.url.match(/(?:github\.com|gitlab\.com|bitbucket\.org)[/:]([^/]+\/[^/.]+)/);
-      if (match) {
-        const host = sourceLink.url.match(/(github\.com|gitlab\.com|bitbucket\.org)/);
-        if (host) {
-          projectId = `${host[1]}/${match[1]}`;
-        }
-      }
-    }
-  }
-
-  // No source repo → legitimately no scorecard (not a failure).
-  if (!projectId) return { value: null, status: 'ok' };
-
-  // 4. Query the GetProject endpoint for scorecard
   const projectUrl = `${BASE}/projects/${encodeURIComponent(projectId)}`;
   const projRes = await fetchJson<{
     scorecard?: {
