@@ -15,6 +15,7 @@ import {
 } from './api/deps-dev.js';
 import { queryVulnerabilities, queryVulnerabilitiesBatch } from './api/osv.js';
 import { mapLimit } from './util/concurrency.js';
+import { buildParentMap, dependencyPath } from './util/depgraph.js';
 
 // Max concurrent deps.dev requests while enriching the dependency graph.
 const DEP_CONCURRENCY = 8;
@@ -115,36 +116,9 @@ export async function checkPackage(
   const directDeps = nodes.filter(n => n.relation === 'DIRECT');
   const indirectDeps = nodes.filter(n => n.relation === 'INDIRECT');
 
-  // Build adjacency list & parent map for BFS pathfinding
-  const parentMap = new Map<number, number>();
-  if (nodes.length > 0) {
-    const queue = [0]; // root is 0
-    const visited = new Set([0]);
-    while (queue.length > 0) {
-      const curr = queue.shift()!;
-      const children = edges.filter(e => e.fromNode === curr).map(e => e.toNode);
-      for (const child of children) {
-        if (!visited.has(child)) {
-          visited.add(child);
-          parentMap.set(child, curr);
-          queue.push(child);
-        }
-      }
-    }
-  }
-
-  function getDependencyPath(nodeId: number): string[] {
-    const path: string[] = [];
-    let curr: number | undefined = nodeId;
-    while (curr !== undefined) {
-      const node = nodes[curr];
-      if (node) {
-        path.unshift(`${node.versionKey.name}@${node.versionKey.version}`);
-      }
-      curr = parentMap.get(curr);
-    }
-    return path;
-  }
+  // Build the parent map (BFS from root) for dependency-path reconstruction.
+  const parentMap = buildParentMap(nodes.length, edges);
+  const getDependencyPath = (nodeId: number): string[] => dependencyPath(nodes, parentMap, nodeId);
 
   const allDeps = nodes.map((node, index) => ({ ...node, nodeId: index })).filter(n => n.relation !== 'SELF');
 

@@ -436,7 +436,7 @@ function sbomSection(r: CheckResult): string[] {
 
 import semver from 'semver';
 
-function findSmartUpgrades(current: string, fixedVersions: string[]) {
+export function findSmartUpgrades(current: string, fixedVersions: string[]) {
   // Simple fallback for non-semver (e.g., Maven)
   let validFixed = fixedVersions.filter(v => semver.valid(v));
   if (validFixed.length === 0) {

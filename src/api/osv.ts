@@ -48,7 +48,7 @@ interface SeverityResult {
   score: number | null;
 }
 
-function extractSeverity(vuln: OsvVulnEntry): SeverityResult {
+export function extractSeverity(vuln: OsvVulnEntry): SeverityResult {
   let score: number | null = null;
   let level: OsvVuln['severity'] = 'UNKNOWN';
 
