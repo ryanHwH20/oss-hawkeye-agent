@@ -2,9 +2,15 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'yaml';
-import type { Policy } from './types.js';
+import type { Policy, BlockingSeverity } from './types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/** Coerce a configured severity into a valid threshold; defaults to MEDIUM. */
+function normalizeSeverity(value: unknown): BlockingSeverity {
+  const s = String(value ?? '').toUpperCase();
+  return s === 'CRITICAL' || s === 'HIGH' || s === 'MEDIUM' || s === 'LOW' ? s : 'MEDIUM';
+}
 
 export function loadPolicy(): Policy {
   // 1. Try to load .audit-agent.yaml from current working directory
@@ -19,6 +25,7 @@ export function loadPolicy(): Policy {
           blockedLicenses: data.blockedLicenses ?? [],
           minScorecardScore: data.minScorecardScore ?? 4,
           blockVulnerabilities: data.blockVulnerabilities ?? true,
+          minBlockingSeverity: normalizeSeverity(data.minBlockingSeverity),
           blockDeprecated: data.blockDeprecated ?? true,
           exceptionFormUrl: data.exceptionFormUrl ?? '',
           ai: data.ai ?? null,
@@ -39,6 +46,7 @@ export function loadPolicy(): Policy {
     blockedLicenses: data.blockedLicenses ?? [],
     minScorecardScore: data.minScorecardScore ?? 4,
     blockVulnerabilities: data.blockVulnerabilities ?? true,
+    minBlockingSeverity: normalizeSeverity(data.minBlockingSeverity),
     blockDeprecated: data.blockDeprecated ?? true,
     exceptionFormUrl: data.exceptionFormUrl ?? '',
     ai: data.ai ?? null,

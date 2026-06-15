@@ -16,6 +16,7 @@ import {
 import { queryVulnerabilities, queryVulnerabilitiesBatch } from './api/osv.js';
 import { mapLimit } from './util/concurrency.js';
 import { buildParentMap, dependencyPath } from './util/depgraph.js';
+import { meetsBlockingThreshold } from './util/severity.js';
 
 // Max concurrent deps.dev requests while enriching the dependency graph.
 const DEP_CONCURRENCY = 8;
@@ -207,17 +208,17 @@ export async function checkPackage(
       });
     }
 
-    const critHighVulns = depVulns.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH' || v.severity === 'MEDIUM');
-    if (critHighVulns.length > 0) {
+    const blockingVulns = depVulns.filter(v => meetsBlockingThreshold(v.severity, policy.minBlockingSeverity));
+    if (blockingVulns.length > 0) {
       sbomViolations.push({
         type: 'SBOM_VULNERABILITY',
         severity: 'HIGH',
         reason: 'Transitive Dependency Vulnerability Detected',
-        details: critHighVulns.map(v => `${v.aliases.find(a => a.startsWith('CVE-')) ?? v.id} (${v.severity})`),
-        riskExplanation: `Transitive dependency ${dep.versionKey.name} contains ${critHighVulns.length} medium/high severity vulnerabilities. While not directly imported, the vulnerability may be exploitable via the dependency chain.`,
+        details: blockingVulns.map(v => `${v.aliases.find(a => a.startsWith('CVE-')) ?? v.id} (${v.severity})`),
+        riskExplanation: `Transitive dependency ${dep.versionKey.name} contains ${blockingVulns.length} vulnerabilities at or above the ${policy.minBlockingSeverity} threshold. While not directly imported, the vulnerability may be exploitable via the dependency chain.`,
         affectedDep: `${dep.versionKey.name}@${dep.versionKey.version}`,
         path,
-        fixedVersions: critHighVulns.flatMap(v => v.fixedVersions)
+        fixedVersions: blockingVulns.flatMap(v => v.fixedVersions)
       });
     }
   }
@@ -252,20 +253,20 @@ export async function checkPackage(
   }
 
   // Vulnerability violation
-  const critHighVulns = vulnerabilities.filter(
-    v => v.severity === 'CRITICAL' || v.severity === 'HIGH' || v.severity === 'MEDIUM'
+  const blockingVulns = vulnerabilities.filter(
+    v => meetsBlockingThreshold(v.severity, policy.minBlockingSeverity)
   );
-  if (critHighVulns.length > 0 && policy.blockVulnerabilities) {
+  if (blockingVulns.length > 0 && policy.blockVulnerabilities) {
     violations.push({
       type: 'VULNERABILITY',
       severity: 'HIGH',
-      reason: 'Known Medium/High Severity Vulnerability Detected',
-      details: critHighVulns.map(v => {
+      reason: `Known Vulnerability at or above ${policy.minBlockingSeverity} severity`,
+      details: blockingVulns.map(v => {
         const cve = v.aliases.find(a => a.startsWith('CVE-')) ?? v.id;
         return `${cve} (${v.severity}${v.cvssScore !== null ? ` · CVSS ${v.cvssScore.toFixed(1)}` : ''})`;
       }),
-      riskExplanation: `This package version contains ${critHighVulns.length} known medium/high severity vulnerabilities. Attackers can exploit these flaws, violating baseline security compliance.`,
-      fixedVersions: critHighVulns.flatMap(v => v.fixedVersions)
+      riskExplanation: `This package version contains ${blockingVulns.length} known vulnerabilities at or above the ${policy.minBlockingSeverity} blocking threshold. Attackers can exploit these flaws, violating baseline security compliance.`,
+      fixedVersions: blockingVulns.flatMap(v => v.fixedVersions)
     });
   }
 

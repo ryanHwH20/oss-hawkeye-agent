@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Configurable vulnerability severity threshold (#13).** Policy now supports
+  `minBlockingSeverity` (`CRITICAL` / `HIGH` / `MEDIUM` / `LOW`, default `MEDIUM`)
+  so teams choose the lowest severity that blocks a package, instead of the
+  hard-coded medium-and-above rule.
 - **Machine-readable output: `--json` and `--sarif` (#11).** Emit the structured
   `CheckResult` as JSON or a SARIF 2.1.0 document for GitHub Code Scanning.
   Machine modes keep stdout clean (human chatter goes to stderr) and preserve the
