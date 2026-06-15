@@ -111,6 +111,33 @@ node dist/cli.js MAVEN org.springframework.boot:spring-boot 3.5.8
 npm install express@4.21.2
 ```
 
+### Machine-Readable Output & CI
+
+For pipelines, emit structured output instead of the Markdown report:
+
+```bash
+node dist/cli.js NPM express 4.16.0 --json    # structured CheckResult
+node dist/cli.js NPM express 4.16.0 --sarif   # SARIF 2.1.0 for GitHub Code Scanning
+```
+
+Exit codes are deterministic, so a CI gate is a one-liner:
+
+- `0` — passed
+- `1` — blocked by policy **or** unverifiable (fail-closed)
+- `2` — the tool itself failed to run (usage / unexpected error)
+
+```yaml
+# .github/workflows/security.yml (example)
+- name: Audit a dependency with Hawkeye
+  run: node dist/cli.js NPM express 4.16.0 --sarif > hawkeye.sarif
+- name: Upload to GitHub Code Scanning
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: hawkeye.sarif
+```
+
+> When a data source is unreachable, Hawkeye **fails closed** (exit `1`) rather than reporting a package as clean — so a CI gate never green-lights an unverifiable package.
+
 ---
 
 ## 🤖 Skill + CLI Integration
