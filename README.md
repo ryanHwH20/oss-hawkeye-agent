@@ -138,6 +138,18 @@ Exit codes are deterministic, so a CI gate is a one-liner:
 
 > When a data source is unreachable, Hawkeye **fails closed** (exit `1`) rather than reporting a package as clean — so a CI gate never green-lights an unverifiable package.
 
+### Whole-Project Scan
+
+Audit every dependency declared in a project's manifests in one go:
+
+```bash
+node dist/cli.js scan .            # scan the current directory
+node dist/cli.js scan ./my-app    # scan a specific path
+node dist/cli.js scan . --sarif > hawkeye.sarif
+```
+
+`scan` auto-detects `package.json` (NPM) and `requirements.txt` (PyPI), audits each dependency, and returns an aggregated verdict with the same fail-closed exit codes (`0` / `1` / `2`). `--json` and `--sarif` work here too.
+
 ---
 
 ## 🤖 Skill + CLI Integration

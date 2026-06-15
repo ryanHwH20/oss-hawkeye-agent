@@ -32,13 +32,14 @@ function levelFor(v: Violation): 'error' | 'note' {
   return v.severity === 'LOW' ? 'note' : 'error';
 }
 
-export function toSarif(result: CheckResult): object {
+/** The SARIF `result` objects for a single audited package. */
+function resultEntries(result: CheckResult): object[] {
   const pkg = `${result.name}@${result.version}`;
-  const results: object[] = [];
+  const entries: object[] = [];
 
   for (const v of result.violations) {
     const affected = v.affectedDep ?? pkg;
-    results.push({
+    entries.push({
       ruleId: v.type,
       level: levelFor(v),
       message: { text: `${v.reason}: ${v.details.join(', ')}. ${v.riskExplanation}` },
@@ -57,16 +58,20 @@ export function toSarif(result: CheckResult): object {
   // Fail-closed: each unverifiable source is surfaced as an error so a broken
   // audit cannot pass silently through a SARIF gate.
   for (const source of result.unverified) {
-    results.push({
+    entries.push({
       ruleId: 'UNVERIFIED',
       level: 'error',
-      message: { text: `Could not verify ${source}. Failing closed: this package was not confirmed safe.` },
+      message: { text: `Could not verify ${source}. Failing closed: ${pkg} was not confirmed safe.` },
       locations: [{ logicalLocations: [{ fullyQualifiedName: pkg, kind: 'package' }] }],
       partialFingerprints: { hawkeye: `UNVERIFIED:${source}:${pkg}` },
       properties: { ecosystem: result.system, package: pkg, source },
     });
   }
 
+  return entries;
+}
+
+function envelope(results: object[]): object {
   return {
     $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
     version: '2.1.0',
@@ -87,4 +92,14 @@ export function toSarif(result: CheckResult): object {
       },
     ],
   };
+}
+
+/** SARIF for a single package audit. */
+export function toSarif(result: CheckResult): object {
+  return envelope(resultEntries(result));
+}
+
+/** SARIF for a whole-project scan — all packages flattened into one run. */
+export function toSarifReport(results: CheckResult[]): object {
+  return envelope(results.flatMap(resultEntries));
 }

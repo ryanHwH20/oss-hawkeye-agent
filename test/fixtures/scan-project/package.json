@@ -1,0 +1,9 @@
+{
+  "name": "fixture-app",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "cleanpkg": "^1.0.0",
+    "gplpkg": "2.0.0"
+  }
+}

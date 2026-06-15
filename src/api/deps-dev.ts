@@ -42,6 +42,12 @@ function cacheSet(key: string, value: unknown): void {
   cache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
+/** Test helper: clear the response cache and in-flight map for isolation. */
+export function __resetCaches(): void {
+  cache.clear();
+  inflight.clear();
+}
+
 // ─── Fetch Helper ─────────────────────────────────────────────────────────────
 
 /**
