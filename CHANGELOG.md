@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **SPDX-expression-aware license matching (#12).** License checks now parse
+  SPDX expressions instead of exact-string matching: `A AND B` is blocked if
+  either side is blocked, while `A OR B` is blocked only if every branch is — so
+  a dual license like `(MIT OR GPL-3.0-only)` is no longer falsely flagged, and
+  copyleft hidden inside a compound expression is no longer missed. Non-SPDX
+  strings fall back to exact match.
 - **Configurable vulnerability severity threshold (#13).** Policy now supports
   `minBlockingSeverity` (`CRITICAL` / `HIGH` / `MEDIUM` / `LOW`, default `MEDIUM`)
   so teams choose the lowest severity that blocks a package, instead of the
