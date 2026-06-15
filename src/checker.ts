@@ -17,6 +17,7 @@ import { queryVulnerabilities, queryVulnerabilitiesBatch } from './api/osv.js';
 import { mapLimit } from './util/concurrency.js';
 import { buildParentMap, dependencyPath } from './util/depgraph.js';
 import { meetsBlockingThreshold } from './util/severity.js';
+import { flaggedLicenses } from './util/license.js';
 
 // Max concurrent deps.dev requests while enriching the dependency graph.
 const DEP_CONCURRENCY = 8;
@@ -183,7 +184,7 @@ export async function checkPackage(
   const sbomViolations: Violation[] = [];
 
   for (const { dep, licenses: depLicList, scorecardScore, depVulns } of depInfos) {
-    const flagged = depLicList.filter(l => policy.blockedLicenses.includes(l));
+    const flagged = flaggedLicenses(depLicList, policy.blockedLicenses);
     const path = getDependencyPath(dep.nodeId);
     
     depLicenses.push({
@@ -241,7 +242,7 @@ export async function checkPackage(
   const advisoryCount = vulnerabilities.length;
 
   // Root license violation
-  const rootFlaggedLicenses = licenses.filter(l => policy.blockedLicenses.includes(l));
+  const rootFlaggedLicenses = flaggedLicenses(licenses, policy.blockedLicenses);
   if (rootFlaggedLicenses.length > 0) {
     violations.push({
       type: 'LICENSE',
