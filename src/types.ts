@@ -1,10 +1,15 @@
 // ─── Core Types ──────────────────────────────────────────────────────────────
 
+/** Severities that can be configured as the minimum blocking threshold. */
+export type BlockingSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
 export interface Policy {
   organizationName: string;
   blockedLicenses: string[];
   minScorecardScore: number;
   blockVulnerabilities: boolean;
+  /** Lowest vulnerability severity that blocks a package. Default: MEDIUM. */
+  minBlockingSeverity: BlockingSeverity;
   blockDeprecated: boolean;
   exceptionFormUrl: string;
   ai?: { type: string; model?: string };

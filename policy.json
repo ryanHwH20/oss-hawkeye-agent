@@ -18,6 +18,7 @@
   ],
   "minScorecardScore": 4,
   "blockVulnerabilities": true,
+  "minBlockingSeverity": "MEDIUM",
   "blockDeprecated": true,
   "exceptionFormUrl": "https://forms.example.com/oss-exception-request",
   "ai": null

@@ -8,9 +8,9 @@ const policy: Policy = {
   blockedLicenses: ['GPL-3.0-only'],
   minScorecardScore: 4,
   blockVulnerabilities: true,
+  minBlockingSeverity: 'MEDIUM',
   blockDeprecated: true,
   exceptionFormUrl: '',
-  ai: null,
 };
 
 interface FakeResponseInit {

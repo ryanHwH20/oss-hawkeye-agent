@@ -214,6 +214,7 @@ policy:
     - "BUSL-1.1"
   minScorecardScore: 4.0
   blockVulnerabilities: true
+  minBlockingSeverity: "MEDIUM"   # CRITICAL | HIGH | MEDIUM | LOW — lowest severity that blocks (default MEDIUM)
   blockDeprecated: true
   exceptionFormUrl: "https://your-org.com/oss-exception-request"
 ```
