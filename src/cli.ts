@@ -1,14 +1,23 @@
 #!/usr/bin/env node
+import { resolve } from 'node:path';
 import { checkPackage } from './checker.js';
-import { formatResult } from './formatter.js';
-import { toSarif } from './sarif.js';
+import { scanProject } from './scan/scan.js';
+import { formatResult, formatScanReport } from './formatter.js';
+import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
 
 function usage(): never {
   console.error('Usage: hawkeye <system> <package> [version] [--json|--sarif]');
+  console.error('       hawkeye scan [path] [--json|--sarif]');
   console.error('Example: hawkeye NPM express 5.2.1');
-  console.error('         hawkeye NPM express 5.2.1 --sarif > hawkeye.sarif');
+  console.error('         hawkeye scan . --sarif > hawkeye.sarif');
   process.exit(2); // usage error — not a policy block
+}
+
+interface OutputMode {
+  json: boolean;
+  sarif: boolean;
+  machine: boolean;
 }
 
 async function main() {
@@ -25,6 +34,11 @@ async function main() {
   // In machine-output mode, stdout carries ONLY the JSON/SARIF document; all
   // human-facing chatter goes to stderr so the output stays pipeable.
   const machine = json || sarif;
+  const out: OutputMode = { json, sarif, machine };
+
+  if (positional[0]?.toLowerCase() === 'scan') {
+    return runScan(positional[1], out);
+  }
 
   if (positional.length < 2) usage();
 
@@ -57,6 +71,37 @@ async function main() {
     process.exit(1);
   } else {
     if (!machine) console.log('\n✅ Audit passed.');
+    process.exit(0);
+  }
+}
+
+async function runScan(path: string | undefined, out: OutputMode): Promise<void> {
+  const dir = path ?? '.';
+  const policy = loadPolicy();
+
+  if (!out.machine) {
+    console.error(`🔍 Scanning project at ${resolve(dir)}...`);
+  }
+
+  const report = await scanProject(dir, policy);
+
+  if (out.sarif) {
+    console.log(JSON.stringify(toSarifReport(report.results), null, 2));
+  } else if (out.json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log('\n' + formatScanReport(report));
+  }
+
+  // Same fail-closed exit semantics as a single-package audit.
+  if (report.verdict === 'BLOCKED') {
+    if (!out.machine) console.error('\n❌ Scan failed: one or more dependencies are blocked.');
+    process.exit(1);
+  } else if (report.verdict === 'UNKNOWN') {
+    console.error(`${out.machine ? '' : '\n'}⚠️  Scan incomplete: some dependencies could not be verified. Failing closed.`);
+    process.exit(1);
+  } else {
+    if (!out.machine) console.log('\n✅ Scan passed.');
     process.exit(0);
   }
 }

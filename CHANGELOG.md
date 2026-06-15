@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`hawkeye scan` — whole-project auditing (#23).** Auto-detects `package.json`
+  (NPM) and `requirements.txt` (PyPI), audits every declared dependency with
+  bounded concurrency, and aggregates into a single fail-closed verdict with the
+  same `0/1/2` exit codes. Supports `--json` and `--sarif` for CI / Code Scanning.
 - **SPDX-expression-aware license matching (#12).** License checks now parse
   SPDX expressions instead of exact-string matching: `A AND B` is blocked if
   either side is blocked, while `A OR B` is blocked only if every branch is — so

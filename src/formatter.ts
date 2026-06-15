@@ -1,4 +1,5 @@
 import type { CheckResult, OsvVuln, ScorecardOfficialSeverity } from './types.js';
+import type { ScanReport } from './scan/scan.js';
 import { loadPolicy } from './policy.js';
 
 const policy = loadPolicy();
@@ -624,4 +625,52 @@ export function formatCommandVerdict(results: CheckResult[]): string {
     '',
     overall,
   ].join('\n');
+}
+
+// ─── Project Scan Report ──────────────────────────────────────────────────────
+
+export function formatScanReport(report: ScanReport): string {
+  const r = report.results;
+  const badge = report.verdict === 'BLOCKED'
+    ? '❌  BLOCKED'
+    : report.verdict === 'UNKNOWN'
+      ? '⚠️  UNVERIFIED'
+      : '✅  APPROVED';
+
+  const manifests = report.manifests.map(m => `\`${m}\``).join(', ') || '_none found_';
+  const lines: string[] = [
+    `# 🎾 Project Scan — ${badge}`,
+    '',
+    `**Path:** \`${report.path}\` · **Manifests:** ${manifests} · **Dependencies audited:** ${r.length}`,
+    '',
+  ];
+
+  if (r.length === 0) {
+    lines.push('No supported manifests with dependencies were found (looked for `package.json`, `requirements.txt`).');
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  lines.push(formatCommandVerdict(r), '');
+
+  const blocked = r.filter(x => x.verdict === 'BLOCKED');
+  if (blocked.length > 0) {
+    lines.push('## ❌ Blocked');
+    for (const x of blocked) {
+      const reason = x.violations.find(v => v.severity !== 'LOW')?.reason ?? 'Policy violation';
+      lines.push(`- \`${x.name}@${x.version}\` (${x.system}) — ${reason}`);
+    }
+    lines.push('');
+  }
+
+  const unknown = r.filter(x => x.verdict === 'UNKNOWN');
+  if (unknown.length > 0) {
+    lines.push('## ⚠️ Unverified (failing closed)');
+    for (const x of unknown) {
+      lines.push(`- \`${x.name}@${x.version}\` (${x.system}) — could not verify ${x.unverified.join(', ')}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
 }
