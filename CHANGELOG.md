@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Machine-readable output: `--json` and `--sarif` (#11).** Emit the structured
+  `CheckResult` as JSON or a SARIF 2.1.0 document for GitHub Code Scanning.
+  Machine modes keep stdout clean (human chatter goes to stderr) and preserve the
+  fail-closed exit codes, so Hawkeye drops into a CI gate as a one-liner.
+  Unverifiable sources are surfaced as SARIF `error` results.
 - OpenSSF Scorecard, CodeQL, and Dependency Review GitHub Actions workflows.
 - `CHANGELOG.md`, `CODEOWNERS`, issue-template chooser config, `.editorconfig`, and `.nvmrc`.
 - `scripts/seed-github.sh` to reproduce the project's labels, milestones, and planning issues.
