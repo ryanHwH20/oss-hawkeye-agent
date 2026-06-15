@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-15
+
 ### Added
 - **`hawkeye scan` — whole-project auditing (#23).** Auto-detects `package.json`
   (NPM) and `requirements.txt` (PyPI), audits every declared dependency with
@@ -30,10 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenSSF Scorecard, CodeQL, and Dependency Review GitHub Actions workflows.
 - `CHANGELOG.md`, `CODEOWNERS`, issue-template chooser config, `.editorconfig`, and `.nvmrc`.
 - `scripts/seed-github.sh` to reproduce the project's labels, milestones, and planning issues.
-- Vitest test suite (36 tests) covering the fail-closed verdict, timeout/retry,
-  bounded concurrency, OSV batch querying, in-flight de-duplication, and the
-  pure logic: dependency-graph BFS/pathfinding, CVSS severity classification,
-  smart upgrade selection, and install-command parsing.
+- Vitest test suite (57 tests) covering the fail-closed verdict, timeout/retry,
+  bounded concurrency, OSV batch querying, in-flight de-duplication, machine
+  output, project scanning, and the pure logic: dependency-graph BFS/pathfinding,
+  CVSS severity classification, SPDX license matching, smart upgrade selection,
+  and install-command parsing.
 
 ### Performance
 - **Bounded concurrency, OSV batching, and request de-duplication (#9).**
@@ -82,7 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Policy-as-Code via `.audit-agent.yaml`.
 - In-memory caching layer with TTL for API responses.
 
-[Unreleased]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/releases/tag/v1.0.0
