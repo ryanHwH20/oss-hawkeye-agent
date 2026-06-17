@@ -21,3 +21,19 @@ All security vulnerabilities will be promptly addressed. We will:
 3. Notify you when the vulnerability has been patched.
 
 Thank you for helping keep the open-source ecosystem secure!
+
+## Supply-Chain Integrity
+
+Hawkeye is published to npm via **OIDC trusted publishing** from GitHub Actions — there is no long-lived npm token to leak. Each release carries **build provenance** (a signed [SLSA](https://slsa.dev) attestation linking the package back to the exact commit and workflow that built it).
+
+Verify what you install:
+
+```bash
+# Verify the published package's provenance and signatures
+npm audit signatures
+
+# Or inspect a specific version's attestations
+npm view oss-hawkeye-agent@latest dist.attestations
+```
+
+A passing `npm audit signatures` confirms the package on npm was built by this repository's `release.yml` workflow and has not been tampered with.
