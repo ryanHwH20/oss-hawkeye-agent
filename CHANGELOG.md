@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Install guardrail — gate AI-agent package installs (#26).** New
+  `hawkeye check-command "<command>"` audits the package(s) an install command
+  would add (parsing `npm install`, `pip install`, `cargo add`, …) and exits
+  `0`/`1`/`2`. A shipped Claude Code [PreToolUse hook](hooks/claude-code-precheck.mjs)
+  uses it to **block** an install with a BLOCKED/UNVERIFIED verdict before it
+  runs — a real gate, not a prompt suggestion. See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+  Non-install package-manager commands (`npm ci`, `npm test`, `go build`, …) pass
+  through untouched.
+
 ## [1.1.0] - 2026-06-15
 
 ### Added

@@ -46,4 +46,14 @@ describe('detectAndParse (issue #10)', () => {
   it('returns null for a non-install command', () => {
     expect(parse('ls -la')).toBeNull();
   });
+
+  it('ignores package-manager commands that are not installs', () => {
+    // These must NOT be treated as installing packages named ci/test/build/etc.
+    expect(parse('npm ci')).toBeNull();
+    expect(parse('npm test')).toBeNull();
+    expect(parse('npm run build')).toBeNull();
+    expect(parse('pip freeze')).toBeNull();
+    expect(parse('go build ./...')).toBeNull();
+    expect(parse('cargo build')).toBeNull();
+  });
 });
