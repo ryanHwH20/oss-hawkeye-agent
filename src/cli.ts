@@ -2,6 +2,7 @@
 import { resolve } from 'node:path';
 import { checkPackage } from './checker.js';
 import { scanProject } from './scan/scan.js';
+import { auditCommand } from './command.js';
 import { formatResult, formatScanReport } from './formatter.js';
 import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
@@ -38,6 +39,10 @@ async function main() {
 
   if (positional[0]?.toLowerCase() === 'scan') {
     return runScan(positional[1], out);
+  }
+
+  if (positional[0]?.toLowerCase() === 'check-command') {
+    return runCheckCommand(positional[1], out);
   }
 
   if (positional.length < 2) usage();
@@ -102,6 +107,45 @@ async function runScan(path: string | undefined, out: OutputMode): Promise<void>
     process.exit(1);
   } else {
     if (!out.machine) console.log('\n✅ Scan passed.');
+    process.exit(0);
+  }
+}
+
+async function runCheckCommand(command: string | undefined, out: OutputMode): Promise<void> {
+  const policy = loadPolicy();
+  const audit = await auditCommand(command ?? '', policy);
+
+  if (out.sarif) {
+    console.log(JSON.stringify(toSarifReport(audit.results), null, 2));
+  } else if (out.json) {
+    console.log(JSON.stringify(audit, null, 2));
+  } else if (!audit.detected) {
+    console.log('No package install detected — nothing to audit.');
+  } else {
+    const badge = audit.verdict === 'BLOCKED' ? '❌ BLOCKED'
+      : audit.verdict === 'UNKNOWN' ? '⚠️ UNVERIFIED'
+        : '✅ APPROVED';
+    console.log(`\n# 🎾 Install Check — ${badge}\n`);
+    console.log(`\`${audit.command}\` → ${audit.system}\n`);
+    for (const r of audit.results) {
+      const b = r.verdict === 'BLOCKED' ? '❌' : r.verdict === 'UNKNOWN' ? '⚠️' : '✅';
+      const reason = r.verdict === 'BLOCKED'
+        ? (r.violations.find(v => v.severity !== 'LOW')?.reason ?? 'Policy violation')
+        : r.verdict === 'UNKNOWN' ? `unverified: ${r.unverified.join(', ')}` : '';
+      console.log(`${b} \`${r.name}@${r.version}\`${reason ? ' — ' + reason : ''}`);
+    }
+    console.log('');
+  }
+
+  // Fail-closed exit codes — drives the PreToolUse hook decision.
+  if (audit.verdict === 'BLOCKED') {
+    if (!out.machine) console.error('❌ Install blocked by Hawkeye.');
+    process.exit(1);
+  } else if (audit.verdict === 'UNKNOWN') {
+    console.error('⚠️  Install unverifiable — failing closed.');
+    process.exit(1);
+  } else {
+    if (!out.machine && audit.detected) console.log('✅ Install approved.');
     process.exit(0);
   }
 }

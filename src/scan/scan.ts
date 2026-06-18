@@ -1,6 +1,7 @@
 import type { CheckResult, Policy, Verdict } from '../types.js';
 import { checkPackage } from '../checker.js';
 import { mapLimit } from '../util/concurrency.js';
+import { aggregateVerdict } from '../util/verdict.js';
 import { detectManifests } from './manifests.js';
 
 // Each checkPackage already bounds its own internal fan-out, so the top-level
@@ -37,11 +38,5 @@ export async function scanProject(dir: string, policy: Policy): Promise<ScanRepo
     checkPackage(d.ecosystem, d.name, d.version, policy)
   );
 
-  const verdict: Verdict = results.some(r => r.verdict === 'BLOCKED')
-    ? 'BLOCKED'
-    : results.some(r => r.verdict === 'UNKNOWN')
-      ? 'UNKNOWN'
-      : 'SAFE';
-
-  return { path: dir, manifests: manifests.map(m => m.file), results, verdict };
+  return { path: dir, manifests: manifests.map(m => m.file), results, verdict: aggregateVerdict(results) };
 }

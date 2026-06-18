@@ -138,6 +138,16 @@ Exit codes are deterministic, so a CI gate is a one-liner:
 
 > When a data source is unreachable, Hawkeye **fails closed** (exit `1`) rather than reporting a package as clean — so a CI gate never green-lights an unverifiable package.
 
+### Gate AI-Agent Installs (PreToolUse hook)
+
+`check-command` audits the package(s) a shell command would install, so an AI coding agent can be **blocked** before it adds a risky dependency:
+
+```bash
+hawkeye check-command "npm install express@4.16.0"   # exit 0 pass / 1 blocked / 2 error
+```
+
+Wire the shipped [Claude Code hook](hooks/claude-code-precheck.mjs) into `~/.claude/settings.json` and the agent literally can't run a blocked `npm install` — a true gate, not a prompt nudge. See **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)** (also covers a tool-agnostic shell shim).
+
 ### Whole-Project Scan
 
 Audit every dependency declared in a project's manifests in one go:

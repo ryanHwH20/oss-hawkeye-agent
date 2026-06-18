@@ -107,7 +107,11 @@ export async function checkPackage(
   // Record unreachable sources. License/SBOM/vulnerabilities are *critical*:
   // if any is unavailable we cannot honestly clear the package. Scorecard is
   // advisory, so its absence is disclosed but does not force UNKNOWN.
+  // A null versionInfo with an 'ok' status means deps.dev authoritatively has
+  // no such package/version — we have zero metadata to audit, so we must not
+  // approve it (e.g. a typo'd or not-yet-indexed name). Fail closed.
   if (versionRes.status === 'unavailable') unverified.push('Package metadata & licenses (deps.dev)');
+  else if (versionInfo === null) unverified.push('Package not found on deps.dev (no metadata to audit)');
   if (depsRes.status === 'unavailable') unverified.push('Dependency graph / SBOM (deps.dev)');
   if (vulnRes.status === 'unavailable') unverified.push('Vulnerabilities (OSV)');
   if (scorecardRes.status === 'unavailable') unverified.push('OpenSSF Scorecard (deps.dev)');
@@ -304,6 +308,7 @@ export async function checkPackage(
   // approve the package — return UNKNOWN, which callers treat as non-passing.
   const hasBlocking = violations.some(v => v.severity === 'HIGH' || v.severity === 'MEDIUM');
   const criticalUnavailable =
+    versionInfo === null ||
     versionRes.status === 'unavailable' ||
     depsRes.status === 'unavailable' ||
     vulnRes.status === 'unavailable' ||

@@ -92,6 +92,22 @@ describe('fail-closed verdict (issue #7)', () => {
     expect(r.unverified).toContain('Package metadata & licenses (deps.dev)');
   });
 
+  it('fails closed (UNKNOWN) when the package does not exist (deps.dev 404), never APPROVED', async () => {
+    // deps.dev is reachable but authoritatively has no such package — every
+    // lookup 404s. We have no metadata to audit, so we must not approve it
+    // (guards typo'd / typosquat-style names that resolve to nothing).
+    vi.stubGlobal('fetch', async (url: string) => {
+      const u = String(url);
+      if (u.includes('api.osv.dev')) return jsonResponse({ vulns: [] });
+      return jsonResponse({}, { ok: false, status: 404 });
+    });
+
+    const r = await checkPackage('NPM', 'this-pkg-does-not-exist-zzz123', undefined, policy);
+
+    expect(r.verdict).toBe('UNKNOWN');
+    expect(r.unverified).toContain('Package not found on deps.dev (no metadata to audit)');
+  });
+
   it('returns SAFE when every source is reachable and the package is clean', async () => {
     const name = 'clean-pkg';
     vi.stubGlobal('fetch', async (url: string) => {

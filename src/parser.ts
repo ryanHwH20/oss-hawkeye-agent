@@ -24,9 +24,9 @@ const ECOSYSTEM_PATTERNS: Array<{
       // skip the command verb (install, add, i)
       const verbs = ['install', 'i', 'add'];
       let start = idx + 1;
-      if (start < tokens.length && verbs.includes(tokens[start].toLowerCase())) {
-        start++;
-      }
+      // Require an explicit install verb — ignore `npm ci`, `npm test`, etc.
+      if (!(start < tokens.length && verbs.includes(tokens[start].toLowerCase()))) return [];
+      start++;
       const pkgs: Array<{ name: string; version: string }> = [];
       for (let i = start; i < tokens.length; i++) {
         const t = tokens[i];
@@ -48,7 +48,8 @@ const ECOSYSTEM_PATTERNS: Array<{
     system: 'PYPI',
     extractor: (tokens, idx) => {
       let start = idx + 1;
-      if (start < tokens.length && tokens[start].toLowerCase() === 'install') start++;
+      if (!(start < tokens.length && tokens[start].toLowerCase() === 'install')) return [];
+      start++;
       const pkgs: Array<{ name: string; version: string }> = [];
       for (let i = start; i < tokens.length; i++) {
         const t = tokens[i];
@@ -68,7 +69,8 @@ const ECOSYSTEM_PATTERNS: Array<{
     system: 'CARGO',
     extractor: (tokens, idx) => {
       let start = idx + 1;
-      if (start < tokens.length && tokens[start].toLowerCase() === 'add') start++;
+      if (!(start < tokens.length && tokens[start].toLowerCase() === 'add')) return [];
+      start++;
       const pkgs: Array<{ name: string; version: string }> = [];
       for (let i = start; i < tokens.length; i++) {
         const t = tokens[i];
@@ -89,7 +91,8 @@ const ECOSYSTEM_PATTERNS: Array<{
     system: 'GO',
     extractor: (tokens, idx) => {
       let start = idx + 1;
-      if (start < tokens.length && tokens[start].toLowerCase() === 'get') start++;
+      if (!(start < tokens.length && tokens[start].toLowerCase() === 'get')) return [];
+      start++;
       const pkgs: Array<{ name: string; version: string }> = [];
       for (let i = start; i < tokens.length; i++) {
         const t = tokens[i];
@@ -110,7 +113,8 @@ const ECOSYSTEM_PATTERNS: Array<{
     system: 'RUBYGEMS',
     extractor: (tokens, idx) => {
       let start = idx + 1;
-      if (start < tokens.length && tokens[start].toLowerCase() === 'install') start++;
+      if (!(start < tokens.length && tokens[start].toLowerCase() === 'install')) return [];
+      start++;
       const pkgs: Array<{ name: string; version: string }> = [];
       for (let i = start; i < tokens.length; i++) {
         const t = tokens[i];
