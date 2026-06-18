@@ -15,7 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uses it to **block** an install with a BLOCKED/UNVERIFIED verdict before it
   runs — a real gate, not a prompt suggestion. See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
   Non-install package-manager commands (`npm ci`, `npm test`, `go build`, …) pass
-  through untouched.
+  through untouched. The hook is **fail-closed**: a detected install that Hawkeye
+  can't verify (CLI missing, wrong `HAWKEYE_BIN`, or a crash) is blocked, not
+  waved through. `HAWKEYE_BIN` may include arguments (e.g.
+  `node /abs/dist/cli.js`) so a local dev build works.
+
+### Fixed
+- **A non-existent package no longer audits as SAFE.** When deps.dev
+  authoritatively has no such package/version (a clean 404), there is no
+  metadata to clear it on, so the verdict is now `UNKNOWN` (fail-closed) rather
+  than `✅ APPROVED`. This closes a gap where a typo'd or not-yet-indexed name —
+  the shape of a typosquat — could pass the install guardrail.
 
 ## [1.1.0] - 2026-06-15
 
