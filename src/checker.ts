@@ -18,6 +18,7 @@ import { mapLimit } from './util/concurrency.js';
 import { buildParentMap, dependencyPath } from './util/depgraph.js';
 import { meetsBlockingThreshold } from './util/severity.js';
 import { flaggedLicenses } from './util/license.js';
+import { detectTyposquat } from './util/typosquat.js';
 
 // Max concurrent deps.dev requests while enriching the dependency graph.
 const DEP_CONCURRENCY = 8;
@@ -301,6 +302,26 @@ export async function checkPackage(
   }
 
 
+
+  // Typosquat check — name-based, no network needed. A name that imitates a
+  // popular package is high-risk (the shape of a malicious supply-chain attack)
+  // and blocks. False positives are recoverable via a documented exception.
+  if (policy.blockTyposquats !== false) {
+    const squat = detectTyposquat(ecosystem, packageName);
+    if (squat) {
+      const how = squat.kind === 'separator'
+        ? `differs only in separators/case from`
+        : `is one character away from`;
+      violations.push({
+        type: 'TYPOSQUAT',
+        severity: 'HIGH',
+        reason: 'Possible Typosquat / Malicious Package',
+        details: [`Did you mean "${squat.nearest}"?`],
+        riskExplanation: `The package name "${packageName}" ${how} the popular package "${squat.nearest}". Typosquatted names are a common malware-delivery vector. If "${squat.nearest}" is what you intended, install that; if this package is genuinely intended, approve it via a documented exception.`,
+        affectedDep: squat.nearest,
+      });
+    }
+  }
 
   // ── Compute fail-closed verdict ───────────────────────────────────────────
   // A policy violation always blocks. Otherwise, if any *critical* source

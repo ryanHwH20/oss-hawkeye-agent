@@ -11,6 +11,8 @@ export interface Policy {
   /** Lowest vulnerability severity that blocks a package. Default: MEDIUM. */
   minBlockingSeverity: BlockingSeverity;
   blockDeprecated: boolean;
+  /** Block packages whose name looks like a typosquat of a popular one. Default: true. */
+  blockTyposquats?: boolean;
   exceptionFormUrl: string;
   ai?: { type: string; model?: string };
 }
@@ -45,7 +47,7 @@ export interface DepLicense {
 }
 
 export interface Violation {
-  type: 'LICENSE' | 'VULNERABILITY' | 'SCORECARD' | 'SBOM_LICENSE' | 'SBOM_VULNERABILITY';
+  type: 'LICENSE' | 'VULNERABILITY' | 'SCORECARD' | 'SBOM_LICENSE' | 'SBOM_VULNERABILITY' | 'TYPOSQUAT';
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
   reason: string;
   details: string[];

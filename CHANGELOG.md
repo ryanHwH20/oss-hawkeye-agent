@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Typosquat / malicious-package detection (#28).** A package whose name is a
+  one-edit look-alike (or a separator/case variant) of a popular package — e.g.
+  `expres` for `express`, `requets` for `requests`, `lo-dash` for `lodash` — is
+  now flagged and **blocked** as a likely typosquat, the shape of a real
+  supply-chain malware attack. This is a signal the upstream data sources don't
+  provide. Detection is name-based (no network), checked against a curated
+  per-ecosystem list that also exempts legitimate near-neighbours (`preact` next
+  to `react`), and a package that is itself popular is never flagged. False
+  positives are recoverable via a documented exception; disable with
+  `blockTyposquats: false` in policy.
 - **Audited exceptions + telemetry — the governed escape hatch.** A
   `.hawkeye-exceptions.yaml` in the repo lets a team pre-approve a specific
   blocked package (with a required `reason`, optional `version`/`ecosystem`,
