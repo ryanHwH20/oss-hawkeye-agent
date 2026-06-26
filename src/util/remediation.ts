@@ -69,6 +69,18 @@ export interface PackageRemediation {
 export function remediatePackage(r: CheckResult): PackageRemediation {
   const base = { name: r.name, system: r.system, current: r.version };
 
+  // Highest priority: known malware → there is no safe version, do not install.
+  const malware = r.violations.find(v => v.type === 'MALWARE');
+  if (malware) {
+    return {
+      ...base,
+      action: 'find-alternative',
+      recommendedVersion: null,
+      fix: null,
+      reason: `${r.name}@${r.version} is flagged as known-malicious (${malware.details.join(', ')}). Do not install — there is no safe version. Remove it and choose a trusted alternative.`,
+    };
+  }
+
   // 0. Looks like a typosquat → the safe move is almost always the real package.
   const squat = r.violations.find(v => v.type === 'TYPOSQUAT');
   if (squat) {

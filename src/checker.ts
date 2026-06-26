@@ -214,7 +214,22 @@ export async function checkPackage(
       });
     }
 
-    const blockingVulns = depVulns.filter(v => meetsBlockingThreshold(v.severity, policy.minBlockingSeverity));
+    // A malicious transitive dependency blocks unconditionally — malware is
+    // never an "advisory", and it often carries no CVSS at all.
+    const maliciousDep = depVulns.filter(v => v.malicious);
+    if (maliciousDep.length > 0) {
+      sbomViolations.push({
+        type: 'MALWARE',
+        severity: 'HIGH',
+        reason: 'Malicious Transitive Dependency',
+        details: maliciousDep.map(v => v.aliases.find(a => /^MAL-/i.test(a)) ?? v.id),
+        riskExplanation: `Transitive dependency ${dep.versionKey.name}@${dep.versionKey.version} is flagged as malicious by OSV. Do not install — malware in the dependency chain executes with your application's privileges.`,
+        affectedDep: `${dep.versionKey.name}@${dep.versionKey.version}`,
+        path,
+      });
+    }
+
+    const blockingVulns = depVulns.filter(v => !v.malicious && meetsBlockingThreshold(v.severity, policy.minBlockingSeverity));
     if (blockingVulns.length > 0) {
       sbomViolations.push({
         type: 'SBOM_VULNERABILITY',
@@ -258,9 +273,23 @@ export async function checkPackage(
     });
   }
 
-  // Vulnerability violation
+  // Malware violation — the strongest signal. A package OSV flags as malicious
+  // blocks unconditionally: independent of the severity threshold and of
+  // blockVulnerabilities, because known malware is never an acceptable risk.
+  const maliciousRoot = vulnerabilities.filter(v => v.malicious);
+  if (maliciousRoot.length > 0) {
+    violations.push({
+      type: 'MALWARE',
+      severity: 'HIGH',
+      reason: 'Known Malicious Package',
+      details: maliciousRoot.map(v => v.aliases.find(a => /^MAL-/i.test(a)) ?? v.id),
+      riskExplanation: `${packageName}@${resolvedVersion} is flagged as malicious by OSV (${maliciousRoot.map(v => v.id).join(', ')}). Do not install. Malicious packages exfiltrate secrets, install backdoors, or run arbitrary code at install time.`,
+    });
+  }
+
+  // Vulnerability violation (malicious advisories are handled above, not here)
   const blockingVulns = vulnerabilities.filter(
-    v => meetsBlockingThreshold(v.severity, policy.minBlockingSeverity)
+    v => !v.malicious && meetsBlockingThreshold(v.severity, policy.minBlockingSeverity)
   );
   if (blockingVulns.length > 0 && policy.blockVulnerabilities) {
     violations.push({
