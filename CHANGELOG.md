@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **Cross-process metadata cache (install-guardrail latency).** The install
+  guardrail spawns a fresh `hawkeye` process per gated install, so the previous
+  in-process LRU was always cold and every install paid the full deps.dev
+  fan-out. Immutable, version-pinned deps.dev payloads (and advisory scorecards)
+  are now persisted to an on-disk cache shared across processes — a repeat audit
+  of `npm install express` drops from ~3.1s to ~0.6s. OSV vulnerability lookups
+  are deliberately **never** cached, so a newly-disclosed CVE is never masked;
+  only successful responses are stored, so an outage is never cached and
+  fail-closed is preserved. Tune with `HAWKEYE_CACHE_DIR` / `HAWKEYE_CACHE_TTL_MS`,
+  or disable with `HAWKEYE_NO_CACHE`.
+
 ### Added
 - **Install guardrail — gate AI-agent package installs (#26).** New
   `hawkeye check-command "<command>"` audits the package(s) an install command

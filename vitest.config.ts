@@ -9,7 +9,9 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
     environment: 'node',
-    // Make exponential backoff instant so retry paths don't slow the suite.
-    env: { HAWKEYE_RETRY_BASE_MS: '0' },
+    // Make exponential backoff instant so retry paths don't slow the suite,
+    // and keep the cross-process disk cache out of the network-stubbing tests
+    // so cached payloads never leak between cases (disk-cache.test.ts opts in).
+    env: { HAWKEYE_RETRY_BASE_MS: '0', HAWKEYE_NO_CACHE: '1' },
   },
 });
