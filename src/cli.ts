@@ -135,6 +135,25 @@ async function runCheckCommand(command: string | undefined, out: OutputMode): Pr
       console.log(`${b} \`${r.name}@${r.version}\`${reason ? ' — ' + reason : ''}`);
     }
     console.log('');
+
+    // Actionable next step(s) — written so an AI agent can self-correct (e.g.
+    // re-install the patched version) instead of just stopping at a block.
+    if (audit.remediation.length > 0) {
+      console.log('## 🔧 How to proceed\n');
+      for (const fix of audit.remediation) {
+        if (fix.action === 'upgrade' && fix.fix) {
+          console.log(`- ✅ Install \`${fix.fix}\` instead — ${fix.reason}`);
+        } else if (fix.action === 'find-alternative') {
+          console.log(`- 🔁 ${fix.reason}`);
+        } else {
+          console.log(`- ⏸️ ${fix.reason}`);
+        }
+      }
+      if (policy.exceptionFormUrl) {
+        console.log(`\n> Need this exact package anyway? Request a documented exception: ${policy.exceptionFormUrl}`);
+      }
+      console.log('');
+    }
   }
 
   // Fail-closed exit codes — drives the PreToolUse hook decision.

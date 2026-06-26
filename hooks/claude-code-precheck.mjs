@@ -58,7 +58,9 @@ process.stdin.on('end', () => {
       // exit 1 → BLOCKED / unverifiable → deny and explain to the agent.
       console.error(
         `🎾 Hawkeye blocked this install (supply-chain policy):\n\n${detail}\n\n` +
-          `Pick a safe alternative, or proceed only with an explicit, documented exception.`
+          `If a safe version is suggested above, retry the install with that exact ` +
+          `version. Otherwise pick a safe alternative, or proceed only with an ` +
+          `explicit, documented exception.`
       );
       process.exit(2);
     }

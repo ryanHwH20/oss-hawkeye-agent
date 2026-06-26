@@ -11,6 +11,29 @@ hawkeye check-command "npm install lodash express"
 hawkeye check-command "pip install requests==2.31.0"
 ```
 
+## Agent self-correction
+
+On a block, `check-command` returns a structured `remediation[]` (visible in
+`--json` and surfaced in the deny reason) so an agent can fix-and-retry instead
+of stopping:
+
+```jsonc
+// hawkeye check-command "npm install lodash@4.17.11" --json  →  .remediation[0]
+{
+  "name": "lodash", "current": "4.17.11",
+  "action": "upgrade",            // upgrade | find-alternative | verify
+  "recommendedVersion": "4.18.0",
+  "fix": "lodash@4.18.0",         // ready-to-install spec
+  "verified": true,               // the recommendation was itself re-audited and passed
+  "reason": "…4.18.0 is patched. Re-run the install with lodash@4.18.0. (verified clean)"
+}
+```
+
+An `upgrade` is only ever offered after the recommended version is **re-audited
+and passes**, so the agent is never sent to a "fix" that is itself blocked. When
+no clean version exists (e.g. a vulnerable transitive dependency), the action
+degrades to `find-alternative` with an honest reason.
+
 ## Claude Code (PreToolUse hook) — recommended
 
 A [PreToolUse hook](https://docs.claude.com/en/docs/claude-code/hooks) runs

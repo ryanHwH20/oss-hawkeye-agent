@@ -435,31 +435,11 @@ function sbomSection(r: CheckResult): string[] {
 
 // ─── Section: Actionable Snippet ──────────────────────────────────────────────
 
-import semver from 'semver';
-
-export function findSmartUpgrades(current: string, fixedVersions: string[]) {
-  // Simple fallback for non-semver (e.g., Maven)
-  let validFixed = fixedVersions.filter(v => semver.valid(v));
-  if (validFixed.length === 0) {
-    if (fixedVersions.length > 0) return { minimal: fixedVersions[fixedVersions.length - 1], latest: fixedVersions[fixedVersions.length - 1] };
-    return { minimal: null, latest: null };
-  }
-  
-  validFixed.sort(semver.compare);
-  const latest = validFixed[validFixed.length - 1];
-  
-  const currentObj = semver.parse(current);
-  let minimal = latest;
-  if (currentObj) {
-    const closestPatch = validFixed.find(v => {
-      const vObj = semver.parse(v);
-      return vObj && vObj.major === currentObj.major && vObj.minor === currentObj.minor && semver.gt(v, current);
-    });
-    if (closestPatch) minimal = closestPatch;
-  }
-  
-  return { minimal, latest };
-}
+// findSmartUpgrades now lives in util/remediation.ts (shared with the install
+// guardrail's machine-actionable output). Imported for internal use here and
+// re-exported for existing callers (e.g. test/upgrades.test.ts).
+import { findSmartUpgrades } from './util/remediation.js';
+export { findSmartUpgrades };
 
 function actionableBlock(r: CheckResult): string[] {
   const lines: string[] = [

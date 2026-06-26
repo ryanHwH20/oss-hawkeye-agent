@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Machine-actionable remediation for agent self-correction.**
+  `check-command` now returns a structured `remediation[]` (in `--json` and in
+  the human/hook output): for a fixable vulnerability it names the exact
+  `name@version` to install instead, so a blocked AI agent can **retry with the
+  safe version** rather than just stopping. Crucially, each proposed upgrade is
+  **re-audited before being offered** — if the patched version is itself blocked
+  (e.g. it still pulls a vulnerable transitive dependency) the suggestion
+  degrades to "find an alternative" instead of sending the agent in circles.
+  License blocks and transitive issues route to honest, non-upgrade guidance.
+
 ### Performance
 - **Cross-process metadata cache (install-guardrail latency).** The install
   guardrail spawns a fresh `hawkeye` process per gated install, so the previous
