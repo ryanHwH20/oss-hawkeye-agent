@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Audited exceptions + telemetry — the governed escape hatch.** A
+  `.hawkeye-exceptions.yaml` in the repo lets a team pre-approve a specific
+  blocked package (with a required `reason`, optional `version`/`ecosystem`,
+  `approvedBy`, and an `expires` date) so an otherwise-blocked install proceeds
+  — recorded as an `override`, not a silent bypass. Exceptions are a *human*
+  artifact (an AI agent benefits but can't grant itself one) and **fail closed**:
+  an expired or malformed exception never applies. Set `HAWKEYE_AUDIT_LOG` to
+  append a JSONL record of every `check-command` decision (allow / block /
+  override, with package, verdict, reason, and approver) — the enterprise hook
+  for measuring block rate, override rate, and fix conversion.
 - **Machine-actionable remediation for agent self-correction.**
   `check-command` now returns a structured `remediation[]` (in `--json` and in
   the human/hook output): for a fixable vulnerability it names the exact

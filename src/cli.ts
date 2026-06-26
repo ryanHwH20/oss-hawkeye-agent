@@ -6,6 +6,7 @@ import { auditCommand } from './command.js';
 import { formatResult, formatScanReport } from './formatter.js';
 import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
+import { recordAudit } from './util/audit-log.js';
 
 function usage(): never {
   console.error('Usage: hawkeye <system> <package> [version] [--json|--sarif]');
@@ -122,9 +123,10 @@ async function runCheckCommand(command: string | undefined, out: OutputMode): Pr
   } else if (!audit.detected) {
     console.log('No package install detected — nothing to audit.');
   } else {
-    const badge = audit.verdict === 'BLOCKED' ? '❌ BLOCKED'
-      : audit.verdict === 'UNKNOWN' ? '⚠️ UNVERIFIED'
-        : '✅ APPROVED';
+    const badge = audit.effectiveVerdict === 'BLOCKED' ? '❌ BLOCKED'
+      : audit.effectiveVerdict === 'UNKNOWN' ? '⚠️ UNVERIFIED'
+        : audit.overrides.length > 0 ? '⚠️ ALLOWED (documented exception)'
+          : '✅ APPROVED';
     console.log(`\n# 🎾 Install Check — ${badge}\n`);
     console.log(`\`${audit.command}\` → ${audit.system}\n`);
     for (const r of audit.results) {
@@ -154,17 +156,44 @@ async function runCheckCommand(command: string | undefined, out: OutputMode): Pr
       }
       console.log('');
     }
+
+    // Documented exceptions that let an otherwise-blocked install proceed.
+    if (audit.overrides.length > 0) {
+      console.log('## ⚠️ Allowed via documented exception\n');
+      for (const o of audit.overrides) {
+        const who = o.approvedBy ? ` (approved by ${o.approvedBy})` : '';
+        console.log(`- \`${o.name}@${o.version}\` was ${o.originalVerdict}${who} — risk accepted: ${o.reason}`);
+      }
+      console.log('');
+    }
   }
 
-  // Fail-closed exit codes — drives the PreToolUse hook decision.
-  if (audit.verdict === 'BLOCKED') {
+  recordAudit({
+    ts: new Date().toISOString(),
+    event: 'check-command',
+    command: audit.command,
+    system: audit.system,
+    decision:
+      audit.effectiveVerdict !== 'SAFE' ? 'block' : audit.overrides.length > 0 ? 'override' : 'allow',
+    verdict: audit.verdict,
+    packages: audit.results.map(r => {
+      const o = audit.overrides.find(x => x.name === r.name && x.version === r.version);
+      return { name: r.name, version: r.version, verdict: r.verdict, override: o?.reason, approvedBy: o?.approvedBy };
+    }),
+  });
+
+  // Fail-closed exit codes — drives the PreToolUse hook decision. An override
+  // turns a block into an allow, but the override is recorded above.
+  if (audit.effectiveVerdict === 'BLOCKED') {
     if (!out.machine) console.error('❌ Install blocked by Hawkeye.');
     process.exit(1);
-  } else if (audit.verdict === 'UNKNOWN') {
+  } else if (audit.effectiveVerdict === 'UNKNOWN') {
     console.error('⚠️  Install unverifiable — failing closed.');
     process.exit(1);
   } else {
-    if (!out.machine && audit.detected) console.log('✅ Install approved.');
+    if (!out.machine && audit.detected) {
+      console.log(audit.overrides.length > 0 ? '⚠️  Install allowed via documented exception.' : '✅ Install approved.');
+    }
     process.exit(0);
   }
 }

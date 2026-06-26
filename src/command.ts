@@ -3,6 +3,7 @@ import { detectAndParse } from './parser.js';
 import { checkPackage, checkPackages } from './checker.js';
 import { aggregateVerdict } from './util/verdict.js';
 import { remediatePackage, type PackageRemediation } from './util/remediation.js';
+import { loadExceptions, matchException, type Exception } from './util/exceptions.js';
 
 /** Short, human/agent-friendly summary of why a result did not pass. */
 function blockSummary(r: CheckResult): string {
@@ -43,13 +44,31 @@ async function verifyRemediations(
   );
 }
 
+/** A non-passing package allowed to proceed via a documented exception. */
+export interface AppliedOverride {
+  name: string;
+  version: string;
+  originalVerdict: Verdict;
+  reason: string;
+  approvedBy?: string;
+}
+
 export interface CommandAudit {
   /** Whether the command was recognized as a package-install command. */
   detected: boolean;
   command: string;
   system?: string;
   results: CheckResult[];
+  /** Raw audited verdict from the package checks. */
   verdict: Verdict;
+  /**
+   * Enforced verdict after documented exceptions are applied. This is what the
+   * exit code / install decision is based on — an override turns a BLOCKED or
+   * UNKNOWN package into an allowed one.
+   */
+  effectiveVerdict: Verdict;
+  /** Non-passing packages allowed through via `.hawkeye-exceptions.yaml`. */
+  overrides: AppliedOverride[];
   /**
    * Machine-actionable next steps for each non-passing package, so an AI agent
    * can self-correct (e.g. re-install a patched version) instead of just
@@ -65,12 +84,19 @@ export interface CommandAudit {
  * return an aggregated verdict. A command that installs nothing is `detected:
  * false` and SAFE (nothing to gate).
  */
-export async function auditCommand(command: string, policy: Policy): Promise<CommandAudit> {
+export async function auditCommand(
+  command: string,
+  policy: Policy,
+  exceptions: Exception[] = loadExceptions()
+): Promise<CommandAudit> {
   const cmd = command.trim();
   const parsed = cmd ? detectAndParse(cmd.split(/\s+/)) : null;
 
   if (!parsed || parsed.result.packages.length === 0) {
-    return { detected: false, command: cmd, results: [], verdict: 'SAFE', remediation: [] };
+    return {
+      detected: false, command: cmd, results: [],
+      verdict: 'SAFE', effectiveVerdict: 'SAFE', overrides: [], remediation: [],
+    };
   }
 
   const { system, packages } = parsed.result;
@@ -79,7 +105,35 @@ export async function auditCommand(command: string, policy: Policy): Promise<Com
     policy
   );
 
-  const candidates = results.filter(r => r.verdict !== 'SAFE').map(remediatePackage);
+  // Apply documented exceptions: a non-passing package with an active exception
+  // is allowed through (recorded as an override), and counts as SAFE toward the
+  // enforced verdict.
+  const overrides: AppliedOverride[] = [];
+  const effectivePerPackage = results.map(r => {
+    if (r.verdict === 'SAFE') return 'SAFE' as Verdict;
+    const ex = matchException(exceptions, r.system, r.name, r.version);
+    if (!ex) return r.verdict;
+    overrides.push({
+      name: r.name, version: r.version, originalVerdict: r.verdict,
+      reason: ex.reason, approvedBy: ex.approvedBy,
+    });
+    return 'SAFE' as Verdict;
+  });
+  const effectiveVerdict: Verdict = effectivePerPackage.includes('BLOCKED')
+    ? 'BLOCKED'
+    : effectivePerPackage.includes('UNKNOWN')
+      ? 'UNKNOWN'
+      : 'SAFE';
+
+  // Remediation is for packages that are *still* blocking after exceptions.
+  const overridden = new Set(overrides.map(o => `${o.name}@${o.version}`));
+  const candidates = results
+    .filter(r => r.verdict !== 'SAFE' && !overridden.has(`${r.name}@${r.version}`))
+    .map(remediatePackage);
   const remediation = await verifyRemediations(candidates, policy);
-  return { detected: true, command: cmd, system, results, verdict: aggregateVerdict(results), remediation };
+
+  return {
+    detected: true, command: cmd, system, results,
+    verdict: aggregateVerdict(results), effectiveVerdict, overrides, remediation,
+  };
 }
