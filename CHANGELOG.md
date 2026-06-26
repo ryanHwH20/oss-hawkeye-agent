@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Typosquat detection evaluation harness.** The product's core claim is
+  precision, so it is now measured, not asserted. A labeled corpus
+  (`test/fixtures/typosquat-eval.json`) drives a CI-gating test
+  (`npm run eval:typosquat`) that computes precision / recall / F1 and fails the
+  build on regression. Current seed corpus: **100% precision (zero false
+  positives), 100% recall on catchable (distance-1 / separator) squats, 88%
+  overall** — the gap is the known combosquat/multi-edit ceiling, tracked
+  explicitly as `hard` cases so the limitation is visible rather than hidden.
+
 ### Security
 - **Authenticated, private on-disk cache.** The cross-process cache fed verdict
   inputs (licenses, dependency graph) but was unauthenticated — a local process
