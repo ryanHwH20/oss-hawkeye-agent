@@ -5,6 +5,7 @@ import type {
   SourceResult,
 } from '../types.js';
 import { resilientFetch } from './http.js';
+import { diskCacheEnabled, readDisk, writeDisk, clearDisk } from '../util/disk-cache.js';
 
 const BASE = 'https://api.deps.dev/v3alpha';
 
@@ -46,6 +47,7 @@ function cacheSet(key: string, value: unknown): void {
 export function __resetCaches(): void {
   cache.clear();
   inflight.clear();
+  clearDisk();
 }
 
 // ─── Fetch Helper ─────────────────────────────────────────────────────────────
@@ -77,6 +79,10 @@ async function doFetchJson<T>(url: string): Promise<SourceResult<T | null>> {
     }
     const data = (await res.json()) as T;
     cacheSet(url, data);
+    // Persist immutable payloads so a *different* process (e.g. the next gated
+    // install) reuses them instead of re-fetching. Only successful responses
+    // reach here, so an outage is never cached — fail-closed is preserved.
+    if (diskCacheEnabled()) writeDisk(url, data);
     return { value: data, status: 'ok' };
   } catch {
     // DNS failure, connection reset, timeout, malformed JSON, etc.
@@ -87,6 +93,16 @@ async function doFetchJson<T>(url: string): Promise<SourceResult<T | null>> {
 async function fetchJson<T>(url: string): Promise<SourceResult<T | null>> {
   const cached = cacheGet<T>(url);
   if (cached !== undefined) return { value: cached, status: 'ok' };
+
+  // Cross-process layer: a warm disk entry skips the network entirely. Promote
+  // it into the in-memory LRU so repeated lookups in this run stay hot too.
+  if (diskCacheEnabled()) {
+    const onDisk = readDisk<T>(url);
+    if (onDisk !== undefined) {
+      cacheSet(url, onDisk);
+      return { value: onDisk, status: 'ok' };
+    }
+  }
 
   const existing = inflight.get(url) as Promise<SourceResult<T | null>> | undefined;
   if (existing) return existing;
