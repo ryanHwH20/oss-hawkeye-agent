@@ -29,6 +29,43 @@ function stubPackage(name: string, license: string) {
   });
 }
 
+// A HIGH-severity CVSS vector (base ~7.5) so the vuln crosses the block threshold.
+const HIGH_VECTOR = 'CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N';
+const verOf = (url: string) => url.match(/\/versions\/([^/:]+)/)?.[1] ?? '';
+
+/**
+ * Stub where a package's vulnerability depends on the *version* being audited,
+ * so we can drive the verify-before-recommend path: `fixedByVersion[v]` gives
+ * the fixed versions to advertise for version `v`; a version absent from the
+ * map audits clean. The (single, SELF-only) dependency graph keeps OSV on the
+ * `/query` path so we branch on the request body's version.
+ */
+function stubVersioned(name: string, fixedByVersion: Record<string, string[]>) {
+  vi.stubGlobal('fetch', async (url: string, opts?: { body?: string }) => {
+    const u = String(url);
+    if (u.includes('api.osv.dev')) {
+      const ver = opts?.body ? JSON.parse(opts.body).version : '';
+      const fixed = fixedByVersion[ver];
+      if (!fixed) return ok({ vulns: [] });
+      return ok({
+        vulns: [{
+          id: 'OSV-TEST-1',
+          summary: 'test vuln',
+          severity: [{ type: 'CVSS_V3', score: HIGH_VECTOR }],
+          affected: [{ ranges: [{ type: 'SEMVER', events: [{ introduced: '0' }, { fixed: fixed[0] }] }] }],
+        }],
+      });
+    }
+    if (u.includes(':dependencies')) {
+      return ok({ nodes: [{ versionKey: { system: 'NPM', name, version: verOf(u) }, relation: 'SELF' }], edges: [] });
+    }
+    if (u.includes('/versions/')) {
+      return ok({ versionKey: { system: 'NPM', name, version: verOf(u) }, licenses: ['MIT'] });
+    }
+    return { ok: false, status: 404, json: async () => ({}) };
+  });
+}
+
 beforeEach(() => __resetCaches());
 afterEach(() => vi.unstubAllGlobals());
 
@@ -46,6 +83,9 @@ describe('auditCommand — install guardrail (issue #26)', () => {
     expect(a.detected).toBe(true);
     expect(a.system).toBe('NPM');
     expect(a.verdict).toBe('BLOCKED');
+    // A blocked install carries machine-actionable remediation for the agent.
+    expect(a.remediation).toHaveLength(1);
+    expect(a.remediation[0].action).toBe('find-alternative');
   });
 
   it('APPROVES a clean install', async () => {
@@ -53,6 +93,27 @@ describe('auditCommand — install guardrail (issue #26)', () => {
     const a = await auditCommand('npm install cleanpkg@1.0.0', policy);
     expect(a.detected).toBe(true);
     expect(a.verdict).toBe('SAFE');
+  });
+
+  it('recommends a verified-clean upgrade for a fixable vulnerability', async () => {
+    // 1.0.0 is vulnerable (fixed in 2.0.0); 2.0.0 audits clean.
+    stubVersioned('vulnpkg', { '1.0.0': ['2.0.0'] });
+    const a = await auditCommand('npm install vulnpkg@1.0.0', policy);
+    expect(a.verdict).toBe('BLOCKED');
+    expect(a.remediation).toHaveLength(1);
+    expect(a.remediation[0].action).toBe('upgrade');
+    expect(a.remediation[0].fix).toBe('vulnpkg@2.0.0');
+    expect(a.remediation[0].verified).toBe(true);
+  });
+
+  it('never recommends a "fix" that is itself blocked — degrades honestly', async () => {
+    // 1.0.0 is vulnerable and "fixed" in 2.0.0, but 2.0.0 is ALSO vulnerable.
+    stubVersioned('stubbornpkg', { '1.0.0': ['2.0.0'], '2.0.0': ['3.0.0'] });
+    const a = await auditCommand('npm install stubbornpkg@1.0.0', policy);
+    expect(a.remediation[0].action).toBe('find-alternative');
+    expect(a.remediation[0].fix).toBeNull();
+    expect(a.remediation[0].verified).toBe(false);
+    expect(a.remediation[0].reason).toContain('does not pass audit');
   });
 
   it('fails closed (UNKNOWN) when a source is unreachable', async () => {
