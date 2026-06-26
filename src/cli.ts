@@ -3,22 +3,26 @@ import { resolve } from 'node:path';
 import { checkPackage } from './checker.js';
 import { scanProject } from './scan/scan.js';
 import { auditCommand } from './command.js';
-import { formatResult, formatScanReport } from './formatter.js';
+import { formatResult, formatScanReport, formatScanComment } from './formatter.js';
 import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
 import { recordAudit } from './util/audit-log.js';
 
 function usage(): never {
   console.error('Usage: hawkeye <system> <package> [version] [--json|--sarif]');
-  console.error('       hawkeye scan [path] [--json|--sarif]');
+  console.error('       hawkeye scan [path] [--json|--sarif|--comment]');
+  console.error('       hawkeye check-command "<install command>" [--json|--sarif]');
   console.error('Example: hawkeye NPM express 5.2.1');
   console.error('         hawkeye scan . --sarif > hawkeye.sarif');
+  console.error('         hawkeye scan . --comment > comment.md   # sticky PR comment');
   process.exit(2); // usage error — not a policy block
 }
 
 interface OutputMode {
   json: boolean;
   sarif: boolean;
+  /** scan only: emit a sticky Markdown PR comment on stdout. */
+  comment: boolean;
   machine: boolean;
 }
 
@@ -29,14 +33,15 @@ async function main() {
 
   const json = flags.has('--json');
   const sarif = flags.has('--sarif');
-  if (json && sarif) {
-    console.error('Error: choose only one of --json or --sarif.');
+  const comment = flags.has('--comment');
+  if ([json, sarif, comment].filter(Boolean).length > 1) {
+    console.error('Error: choose only one of --json, --sarif, or --comment.');
     process.exit(2);
   }
-  // In machine-output mode, stdout carries ONLY the JSON/SARIF document; all
-  // human-facing chatter goes to stderr so the output stays pipeable.
-  const machine = json || sarif;
-  const out: OutputMode = { json, sarif, machine };
+  // In machine-output mode, stdout carries ONLY the document (JSON / SARIF /
+  // Markdown comment); all human-facing chatter goes to stderr so it stays pipeable.
+  const machine = json || sarif || comment;
+  const out: OutputMode = { json, sarif, comment, machine };
 
   if (positional[0]?.toLowerCase() === 'scan') {
     return runScan(positional[1], out);
@@ -95,6 +100,8 @@ async function runScan(path: string | undefined, out: OutputMode): Promise<void>
     console.log(JSON.stringify(toSarifReport(report.results), null, 2));
   } else if (out.json) {
     console.log(JSON.stringify(report, null, 2));
+  } else if (out.comment) {
+    console.log(formatScanComment(report));
   } else {
     console.log('\n' + formatScanReport(report));
   }

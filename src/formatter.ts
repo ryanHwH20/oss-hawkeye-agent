@@ -654,3 +654,58 @@ export function formatScanReport(report: ScanReport): string {
 
   return lines.join('\n');
 }
+
+/** Hidden marker so the PR bot can find and update its own comment in place. */
+export const PR_COMMENT_MARKER = '<!-- hawkeye-pr-comment -->';
+
+/**
+ * Render a concise, sticky PR comment for a project scan. Leads with the marker
+ * so a bot can update the same comment on each push instead of stacking new
+ * ones, and collapses the detail tables to keep the thread readable.
+ */
+export function formatScanComment(report: ScanReport): string {
+  const r = report.results;
+  const blocked = r.filter(x => x.verdict === 'BLOCKED');
+  const unknown = r.filter(x => x.verdict === 'UNKNOWN');
+  const passed = r.length - blocked.length - unknown.length;
+
+  const badge = report.verdict === 'BLOCKED' ? '❌ Blocked'
+    : report.verdict === 'UNKNOWN' ? '⚠️ Unverified'
+      : '✅ Passed';
+  const manifests = report.manifests.map(m => `\`${m}\``).join(', ') || '_none found_';
+
+  const lines: string[] = [
+    PR_COMMENT_MARKER,
+    `## 🎾 Hawkeye — Supply-Chain Scan: ${badge}`,
+    '',
+    `**${r.length}** dependencies · ${manifests} · ✅ ${passed} passed · ⚠️ ${unknown.length} unverified · ❌ ${blocked.length} blocked`,
+    '',
+  ];
+
+  if (blocked.length > 0) {
+    lines.push(`<details open><summary><strong>❌ Blocked (${blocked.length})</strong></summary>`, '',
+      '| Package | Ecosystem | Reason |', '| :-- | :-- | :-- |');
+    for (const x of blocked) {
+      const reason = x.violations.find(v => v.severity !== 'LOW')?.reason ?? 'Policy violation';
+      lines.push(`| \`${x.name}@${x.version}\` | ${x.system} | ${reason} |`);
+    }
+    lines.push('', '</details>', '');
+  }
+
+  if (unknown.length > 0) {
+    lines.push(`<details><summary><strong>⚠️ Unverified — failing closed (${unknown.length})</strong></summary>`, '',
+      '| Package | Ecosystem | Could not verify |', '| :-- | :-- | :-- |');
+    for (const x of unknown) {
+      lines.push(`| \`${x.name}@${x.version}\` | ${x.system} | ${x.unverified.join('; ')} |`);
+    }
+    lines.push('', '</details>', '');
+  }
+
+  if (blocked.length === 0 && unknown.length === 0) {
+    lines.push('> ✅ All dependencies passed Hawkeye’s supply-chain checks — license, CVE/CVSS, OpenSSF Scorecard, transitive SBOM, and typosquat.', '');
+  }
+
+  lines.push('---',
+    '<sub>🎾 Hawkeye fails closed: an unverifiable dependency is never reported as safe. · [Hawkeye Agent](https://github.com/ryanHwH20/oss-hawkeye-agent)</sub>');
+  return lines.join('\n');
+}

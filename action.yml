@@ -1,0 +1,89 @@
+name: 'Hawkeye Supply-Chain Scan'
+description: 'Audit a project''s dependencies (license, CVE/CVSS, OpenSSF Scorecard, transitive SBOM, typosquat) — fails closed, posts a sticky PR comment, and uploads SARIF.'
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  path:
+    description: 'Directory to scan (auto-detects package.json / requirements.txt).'
+    required: false
+    default: '.'
+  comment:
+    description: 'Post/update a sticky PR comment with the scan result (pull_request events).'
+    required: false
+    default: 'true'
+  upload-sarif:
+    description: 'Upload SARIF to GitHub code scanning.'
+    required: false
+    default: 'true'
+  fail-on-block:
+    description: 'Fail the job when the scan is BLOCKED or UNVERIFIED (fail-closed).'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v4
+      with:
+        node-version: '20'
+
+    - name: Build Hawkeye (from this action's pinned source)
+      shell: bash
+      run: |
+        cd "$GITHUB_ACTION_PATH"
+        npm ci --no-audit --no-fund
+        npm run build
+
+    - name: Run Hawkeye scan
+      id: scan
+      shell: bash
+      run: |
+        BIN="node $GITHUB_ACTION_PATH/dist/cli.js"
+        set +e
+        $BIN scan "${{ inputs.path }}" --sarif > hawkeye.sarif
+        code=$?
+        $BIN scan "${{ inputs.path }}" --comment > hawkeye-comment.md
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "## 🎾 Hawkeye scan (exit $code)" >> "$GITHUB_STEP_SUMMARY"
+        cat hawkeye-comment.md >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload SARIF to code scanning
+      if: ${{ inputs.upload-sarif == 'true' && hashFiles('hawkeye.sarif') != '' }}
+      uses: github/codeql-action/upload-sarif@c35d1b164463ee62a100735382aaaa525c5d3496 # v3
+      with:
+        sarif_file: hawkeye.sarif
+        category: hawkeye
+
+    - name: Post sticky PR comment
+      if: ${{ inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        PR='${{ github.event.pull_request.number }}'
+        MARKER='<!-- hawkeye-pr-comment -->'
+        id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+              --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -n1)
+        if [ -n "$id" ]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" \
+            -f body="$(cat hawkeye-comment.md)" >/dev/null
+          echo "Updated existing Hawkeye comment ($id)."
+        else
+          gh pr comment "$PR" --body-file hawkeye-comment.md
+          echo "Created Hawkeye comment."
+        fi
+
+    - name: Enforce verdict (fail closed)
+      if: ${{ inputs.fail-on-block == 'true' }}
+      shell: bash
+      run: |
+        code='${{ steps.scan.outputs.exit-code }}'
+        if [ "$code" != "0" ]; then
+          echo "::error::Hawkeye scan did not pass (exit $code) — see the PR comment / job summary."
+          exit 1
+        fi
+        echo "Hawkeye scan passed."
