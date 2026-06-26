@@ -7,11 +7,14 @@ import { formatResult, formatScanReport, formatScanComment } from './formatter.j
 import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
 import { recordAudit } from './util/audit-log.js';
+import { parseAuditLog, aggregateAudit, formatAuditReport } from './audit-report.js';
+import { readFileSync } from 'node:fs';
 
 function usage(): never {
   console.error('Usage: hawkeye <system> <package> [version] [--json|--sarif]');
   console.error('       hawkeye scan [path] [--json|--sarif|--comment]');
   console.error('       hawkeye check-command "<install command>" [--json|--sarif]');
+  console.error('       hawkeye audit-report [log...] [--json]');
   console.error('Example: hawkeye NPM express 5.2.1');
   console.error('         hawkeye scan . --sarif > hawkeye.sarif');
   console.error('         hawkeye scan . --comment > comment.md   # sticky PR comment');
@@ -49,6 +52,10 @@ async function main() {
 
   if (positional[0]?.toLowerCase() === 'check-command') {
     return runCheckCommand(positional[1], out);
+  }
+
+  if (positional[0]?.toLowerCase() === 'audit-report') {
+    return runAuditReport(positional.slice(1), out);
   }
 
   if (positional.length < 2) usage();
@@ -185,7 +192,8 @@ async function runCheckCommand(command: string | undefined, out: OutputMode): Pr
     verdict: audit.verdict,
     packages: audit.results.map(r => {
       const o = audit.overrides.find(x => x.name === r.name && x.version === r.version);
-      return { name: r.name, version: r.version, verdict: r.verdict, override: o?.reason, approvedBy: o?.approvedBy };
+      const categories = [...new Set(r.violations.map(v => v.type))];
+      return { name: r.name, version: r.version, verdict: r.verdict, categories, override: o?.reason, approvedBy: o?.approvedBy };
     }),
   });
 
@@ -203,6 +211,31 @@ async function runCheckCommand(command: string | undefined, out: OutputMode): Pr
     }
     process.exit(0);
   }
+}
+
+async function runAuditReport(files: string[], out: OutputMode): Promise<void> {
+  const paths = files.length > 0 ? files : (process.env.HAWKEYE_AUDIT_LOG ? [process.env.HAWKEYE_AUDIT_LOG] : []);
+  if (paths.length === 0) {
+    console.error('Usage: hawkeye audit-report <log...>  (or set HAWKEYE_AUDIT_LOG)');
+    process.exit(2);
+  }
+
+  let text = '';
+  for (const p of paths) {
+    try {
+      text += readFileSync(p, 'utf8') + '\n';
+    } catch {
+      console.error(`⚠️  Could not read audit log: ${p}`);
+    }
+  }
+
+  const report = aggregateAudit(parseAuditLog(text));
+  if (out.json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(formatAuditReport(report));
+  }
+  process.exit(0);
 }
 
 main().catch(err => {

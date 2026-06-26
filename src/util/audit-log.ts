@@ -17,6 +17,8 @@ export interface AuditEntry {
     name: string;
     version: string;
     verdict: string;
+    /** Violation types found (e.g. MALWARE, TYPOSQUAT, LICENSE) — for reporting. */
+    categories?: string[];
     /** Reason recorded when this package was allowed via a documented exception. */
     override?: string;
     approvedBy?: string;

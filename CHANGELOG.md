@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`hawkeye audit-report` — telemetry you can measure.** Aggregates one or more
+  `HAWKEYE_AUDIT_LOG` JSONL files into the metrics an org cares about: total
+  decisions, **block rate**, **override rate** (how often a would-be block is
+  waived), most-blocked packages, and a breakdown by finding category
+  (MALWARE / TYPOSQUAT / LICENSE / vulnerability). Markdown or `--json`. The
+  audit log now records each package's finding categories to power it. This is
+  the local/CI aggregation step toward fleet-wide measurement.
 - **Known-malware detection via OSV (`MAL-*`).** Hawkeye now recognizes OSV
   malicious-package advisories (the OSSF malicious-packages feed) and raises a
   dedicated `MALWARE` finding that **blocks unconditionally** — independent of
