@@ -276,7 +276,7 @@ policy:
 
 ## 🗺️ Roadmap
 
-Our strategy and positioning live in **[docs/VISION.md](docs/VISION.md)**; the live, issue-linked roadmap is in **[docs/ROADMAP.md](docs/ROADMAP.md)**. At a glance:
+Our strategy and positioning live in **[docs/VISION.md](docs/VISION.md)**; the live, issue-linked roadmap is in **[docs/ROADMAP.md](docs/ROADMAP.md)**; the engineering arc and measured outcomes are in **[docs/STRATEGY.md](docs/STRATEGY.md)**. At a glance:
 
 | Milestone | Focus | Status |
 | :--- | :--- | :--- |
