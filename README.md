@@ -238,6 +238,7 @@ policy:
   blockVulnerabilities: true
   minBlockingSeverity: "MEDIUM"   # CRITICAL | HIGH | MEDIUM | LOW — lowest severity that blocks (default MEDIUM)
   blockDeprecated: true
+  blockTyposquats: true            # block names that look like a typosquat of a popular package (default true)
   exceptionFormUrl: "https://your-org.com/oss-exception-request"
 ```
 

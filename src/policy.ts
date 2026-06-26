@@ -27,6 +27,7 @@ export function loadPolicy(): Policy {
           blockVulnerabilities: data.blockVulnerabilities ?? true,
           minBlockingSeverity: normalizeSeverity(data.minBlockingSeverity),
           blockDeprecated: data.blockDeprecated ?? true,
+          blockTyposquats: data.blockTyposquats ?? true,
           exceptionFormUrl: data.exceptionFormUrl ?? '',
           ai: data.ai ?? null,
         };
@@ -48,6 +49,7 @@ export function loadPolicy(): Policy {
     blockVulnerabilities: data.blockVulnerabilities ?? true,
     minBlockingSeverity: normalizeSeverity(data.minBlockingSeverity),
     blockDeprecated: data.blockDeprecated ?? true,
+    blockTyposquats: data.blockTyposquats ?? true,
     exceptionFormUrl: data.exceptionFormUrl ?? '',
     ai: data.ai ?? null,
   };

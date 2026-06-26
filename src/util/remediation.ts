@@ -69,6 +69,19 @@ export interface PackageRemediation {
 export function remediatePackage(r: CheckResult): PackageRemediation {
   const base = { name: r.name, system: r.system, current: r.version };
 
+  // 0. Looks like a typosquat → the safe move is almost always the real package.
+  const squat = r.violations.find(v => v.type === 'TYPOSQUAT');
+  if (squat) {
+    const suggested = squat.affectedDep ?? 'the intended package';
+    return {
+      ...base,
+      action: 'find-alternative',
+      recommendedVersion: null,
+      fix: null,
+      reason: `${r.name} looks like a typosquat of "${suggested}". Did you mean "${suggested}"? If this package is genuinely intended, approve it via a documented exception.`,
+    };
+  }
+
   // 1. The root package itself has a vulnerability → upgrade to a patched one.
   const rootVulns = r.violations.filter(v => v.type === 'VULNERABILITY');
   if (rootVulns.length > 0) {
