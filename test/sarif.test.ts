@@ -71,4 +71,14 @@ describe('toSarif (issue #11)', () => {
     const s = toSarif(makeResult({ verdict: 'BLOCKED', violations: [sbom] })) as any;
     expect(s.runs[0].results[0].locations[0].logicalLocations[0].fullyQualifiedName).toBe('left-pad@1.0.0');
   });
+
+  it('gives every result a physical location (GitHub Code Scanning requires it)', () => {
+    const npm = toSarif(makeResult({ verdict: 'BLOCKED', violations: [vuln] })) as any;
+    const loc = npm.runs[0].results[0].locations[0].physicalLocation;
+    expect(loc.artifactLocation.uri).toBe('package.json'); // NPM → package.json
+    expect(loc.region.startLine).toBe(1);
+
+    const pypi = toSarif(makeResult({ system: 'PYPI', verdict: 'UNKNOWN', unverified: ['OSV'] })) as any;
+    expect(pypi.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri).toBe('requirements.txt');
+  });
 });
