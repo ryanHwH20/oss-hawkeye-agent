@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadExceptions, matchException, type Exception } from '../src/util/exceptions.js';
+
+const EXC = 'exceptions:\n  - package: gplpkg\n    reason: legacy, approved\n';
 
 const FAR_FUTURE = Date.parse('2999-01-01');
 const LONG_AGO = Date.parse('2000-01-01');
@@ -79,5 +82,51 @@ describe('loadExceptions', () => {
 
   it('returns [] when no exceptions file exists', () => {
     expect(loadExceptions(tmpdir())).toEqual([]);
+  });
+});
+
+describe('loadExceptions — git provenance gate (review v3 #1)', () => {
+  const g = (dir: string, ...args: string[]) => execFileSync('git', args, { cwd: dir, stdio: 'pipe' });
+  function newRepo(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'hawkeye-gitexc-'));
+    g(dir, 'init', '-q');
+    g(dir, 'config', 'user.email', 't@t');
+    g(dir, 'config', 'user.name', 't');
+    g(dir, 'commit', '--allow-empty', '-qm', 'init'); // establish HEAD
+    return dir;
+  }
+  const dirs: string[] = [];
+  const repo = () => { const d = newRepo(); dirs.push(d); return d; };
+  afterEach(() => { delete process.env.HAWKEYE_TRUST_UNCOMMITTED_EXCEPTIONS; });
+  afterAll(() => dirs.forEach(d => rmSync(d, { recursive: true, force: true })));
+
+  it('honors a committed, unmodified exceptions file', () => {
+    const dir = repo();
+    writeFileSync(join(dir, '.hawkeye-exceptions.yaml'), EXC);
+    g(dir, 'add', '.hawkeye-exceptions.yaml');
+    g(dir, 'commit', '-qm', 'add exceptions');
+    expect(loadExceptions(dir)).toHaveLength(1);
+  });
+
+  it('IGNORES an uncommitted (agent-written) exceptions file', () => {
+    const dir = repo();
+    writeFileSync(join(dir, '.hawkeye-exceptions.yaml'), EXC); // written, never committed
+    expect(loadExceptions(dir)).toEqual([]);
+  });
+
+  it('IGNORES a committed file that was then modified in the working tree', () => {
+    const dir = repo();
+    writeFileSync(join(dir, '.hawkeye-exceptions.yaml'), EXC);
+    g(dir, 'add', '.hawkeye-exceptions.yaml');
+    g(dir, 'commit', '-qm', 'add');
+    writeFileSync(join(dir, '.hawkeye-exceptions.yaml'), EXC + '  - package: evil\n    reason: x\n'); // tampered
+    expect(loadExceptions(dir)).toEqual([]);
+  });
+
+  it('honors an uncommitted file when explicitly overridden', () => {
+    const dir = repo();
+    writeFileSync(join(dir, '.hawkeye-exceptions.yaml'), EXC);
+    process.env.HAWKEYE_TRUST_UNCOMMITTED_EXCEPTIONS = '1';
+    expect(loadExceptions(dir)).toHaveLength(1);
   });
 });

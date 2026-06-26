@@ -50,10 +50,17 @@ exceptions:
 ```
 
 A matching, non-expired exception turns that package's block into an **allowed
-override**: the install proceeds (exit 0) and is recorded as such. It is a
-*human* artifact committed to the repo — an AI agent benefits from it but cannot
-grant itself one — and it **fails closed**: an expired or malformed exception
-never applies.
+override**: the install proceeds (exit 0) and is recorded as such. It **fails
+closed**: an expired or malformed exception never applies.
+
+**Provenance — an agent can't grant itself one.** An exception only takes effect
+when `.hawkeye-exceptions.yaml` is **committed to git and unmodified** in the
+working tree, so granting one leaves a reviewable commit. An uncommitted file —
+e.g. one a gated agent just wrote to whitelist itself — is **ignored** (with a
+warning). Outside a git repo (or with `HAWKEYE_TRUST_UNCOMMITTED_EXCEPTIONS=1`)
+provenance can't be verified, so the file is honored. (A same-machine attacker
+who can also forge commits is out of scope — but the abuse is then in git
+history.)
 
 ## Audit log / telemetry
 

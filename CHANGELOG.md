@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Exceptions require git provenance — a gated agent can't self-grant one.**
+  The override escape hatch was just a file in the repo, which an AI agent (the
+  thing being gated) can write — letting it whitelist its own malicious install.
+  An exception now only takes effect when `.hawkeye-exceptions.yaml` is
+  **committed to git and unmodified** in the working tree, so granting one leaves
+  a reviewable commit; an uncommitted/modified file is ignored (fail-closed) with
+  a loud warning. Non-git contexts (or `HAWKEYE_TRUST_UNCOMMITTED_EXCEPTIONS=1`)
+  can't be verified and are honored. A same-machine attacker who can forge
+  commits is out of scope — but the abuse is then in git history.
+
 ### Added
 - **Optional resident daemon (`hawkeye daemon`) — near-instant repeat installs.**
   The install gate spawns a fresh process per call, so even with the disk cache

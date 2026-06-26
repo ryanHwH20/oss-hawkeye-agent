@@ -39,7 +39,7 @@ clear before the next mattered.
 | **Install guardrail (#46)** | `check-command` + a Claude Code PreToolUse hook — a *real* block before install, not a prompt. The wedge. |
 | **Cross-process cache (#50)** | The hook spawns a fresh process per install → the in-memory cache was always cold. Persisted immutable deps.dev metadata: repeat audit **3.1s → 0.6s**. |
 | **Agent self-correction (#51)** | A block the agent can *act on*: structured `remediation` names the exact safe `name@version`, and the recommendation is **re-audited before it's offered** so the agent never loops on a "fix" that's itself blocked. |
-| **Governed exceptions + telemetry (#52)** | The legitimate escape hatch: a repo-local, expiring, audited `.hawkeye-exceptions.yaml` (a human artifact an agent can't self-grant) instead of ripping the hook out — plus `HAWKEYE_AUDIT_LOG`. |
+| **Governed exceptions + telemetry (#52, #62)** | The legitimate escape hatch: a repo-local, expiring, audited `.hawkeye-exceptions.yaml` instead of ripping the hook out — plus `HAWKEYE_AUDIT_LOG`. Exceptions only take effect when **committed to git** (#62), so a gated agent can't self-grant one by writing an uncommitted file. |
 | **GitHub Action + PR bot (#54)** | Meets the decision in the PR: scan, upload SARIF, sticky comment. The adoption surface (Wedge A). |
 
 ### 2. Is it *right*? (correctness & precision)
