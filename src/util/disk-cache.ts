@@ -71,6 +71,11 @@ function cacheDir(): string {
   return process.env.HAWKEYE_CACHE_DIR || defaultDir();
 }
 
+/** The cache directory root — also used to place the daemon socket. */
+export function cacheRoot(): string {
+  return cacheDir();
+}
+
 /** Only immutable version-pinned data and advisory scorecards are cacheable. */
 export function isCacheable(url: string): boolean {
   return url.includes('/versions/') || url.includes('/projects/');

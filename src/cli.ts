@@ -8,6 +8,8 @@ import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
 import { recordAudit } from './util/audit-log.js';
 import { parseAuditLog, aggregateAudit, formatAuditReport } from './audit-report.js';
+import { loadExceptions } from './util/exceptions.js';
+import { daemonAudit } from './daemon-client.js';
 import { readFileSync } from 'node:fs';
 
 function usage(): never {
@@ -15,6 +17,7 @@ function usage(): never {
   console.error('       hawkeye scan [path] [--json|--sarif|--comment]');
   console.error('       hawkeye check-command "<install command>" [--json|--sarif]');
   console.error('       hawkeye audit-report [log...] [--json]');
+  console.error('       hawkeye daemon   # optional resident speed-up for the install gate');
   console.error('Example: hawkeye NPM express 5.2.1');
   console.error('         hawkeye scan . --sarif > hawkeye.sarif');
   console.error('         hawkeye scan . --comment > comment.md   # sticky PR comment');
@@ -56,6 +59,11 @@ async function main() {
 
   if (positional[0]?.toLowerCase() === 'audit-report') {
     return runAuditReport(positional.slice(1), out);
+  }
+
+  if (positional[0]?.toLowerCase() === 'daemon') {
+    const { startDaemon } = await import('./daemon.js');
+    return startDaemon(); // server keeps the process alive
   }
 
   if (positional.length < 2) usage();
@@ -128,7 +136,12 @@ async function runScan(path: string | undefined, out: OutputMode): Promise<void>
 
 async function runCheckCommand(command: string | undefined, out: OutputMode): Promise<void> {
   const policy = loadPolicy();
-  const audit = await auditCommand(command ?? '', policy);
+  const exceptions = loadExceptions();
+  // Fast path: a running daemon answers from warm caches / a recent-verdict memo.
+  // Falls back to an in-process audit when no daemon is reachable.
+  const audit =
+    (await daemonAudit(command ?? '', policy, exceptions)) ??
+    (await auditCommand(command ?? '', policy, exceptions));
 
   if (out.sarif) {
     console.log(JSON.stringify(toSarifReport(audit.results), null, 2));
