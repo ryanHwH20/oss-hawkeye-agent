@@ -19,6 +19,8 @@ interface RuleDef {
 }
 
 const RULES: RuleDef[] = [
+  { id: 'MALWARE', name: 'MaliciousPackage', shortDescription: 'Package flagged as malicious (OSV malicious-packages feed)' },
+  { id: 'TYPOSQUAT', name: 'Typosquat', shortDescription: 'Name resembles a popular package — likely typosquat' },
   { id: 'LICENSE', name: 'DirectLicenseBlocked', shortDescription: 'Direct dependency uses a policy-blocked license' },
   { id: 'VULNERABILITY', name: 'KnownVulnerability', shortDescription: 'Known vulnerability affects this package version' },
   { id: 'SBOM_LICENSE', name: 'TransitiveLicenseBlocked', shortDescription: 'Transitive dependency uses a policy-blocked license' },

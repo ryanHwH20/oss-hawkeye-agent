@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Known-malware detection via OSV (`MAL-*`).** Hawkeye now recognizes OSV
+  malicious-package advisories (the OSSF malicious-packages feed) and raises a
+  dedicated `MALWARE` finding that **blocks unconditionally** — independent of
+  the severity threshold and of `blockVulnerabilities`, because malware commonly
+  carries no CVSS and is never an acceptable risk. Applies to the requested
+  package and its transitive dependencies; remediation says "do not install —
+  there is no safe version." This is a data-backed signal (not a heuristic),
+  complementing the name-based typosquat check.
 - **Audit the installed version, not the declared range (lockfile-aware scan).**
   `hawkeye scan` now prefers `package-lock.json` / `npm-shrinkwrap.json` over
   `package.json` when present, auditing each direct dependency at the version npm

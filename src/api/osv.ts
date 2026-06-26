@@ -100,6 +100,21 @@ function extractFixedVersions(vuln: OsvVulnEntry): string[] {
   return [...new Set(fixed)];
 }
 
+/**
+ * Whether an OSV advisory marks the package itself as malicious (malware /
+ * backdoor), as opposed to a vulnerability in legitimate code. OSV aggregates
+ * the OSSF malicious-packages feed under `MAL-*` IDs; some sources also tag it
+ * in `database_specific`. Malware often carries no CVSS, so it must be detected
+ * by provenance, not severity.
+ */
+function isMalicious(v: OsvVulnEntry): boolean {
+  const ids = [v.id, ...(v.aliases ?? [])];
+  if (ids.some(id => typeof id === 'string' && /^MAL-/i.test(id))) return true;
+  const ds = v.database_specific as { malicious?: unknown; type?: unknown } | undefined;
+  if (ds?.malicious === true) return true;
+  return typeof ds?.type === 'string' && ds.type.toUpperCase() === 'MALWARE';
+}
+
 /** Convert a raw OSV vulnerability record into our normalized shape. */
 function mapVuln(v: OsvVulnEntry): OsvVuln {
   const { level, score } = extractSeverity(v);
@@ -111,6 +126,7 @@ function mapVuln(v: OsvVulnEntry): OsvVuln {
     cvssScore: score,
     aliases: v.aliases ?? [],
     fixedVersions: extractFixedVersions(v),
+    malicious: isMalicious(v),
   };
 }
 

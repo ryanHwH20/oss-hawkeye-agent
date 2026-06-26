@@ -25,6 +25,8 @@ export interface OsvVuln {
   cvssScore: number | null;
   aliases: string[];
   fixedVersions: string[];
+  /** True when this advisory marks the package itself as malicious (OSV MAL-*). */
+  malicious?: boolean;
 }
 
 export type ScorecardOfficialSeverity = 'Critical' | 'High' | 'Medium' | 'Low' | 'Unknown';
@@ -47,7 +49,7 @@ export interface DepLicense {
 }
 
 export interface Violation {
-  type: 'LICENSE' | 'VULNERABILITY' | 'SCORECARD' | 'SBOM_LICENSE' | 'SBOM_VULNERABILITY' | 'TYPOSQUAT';
+  type: 'LICENSE' | 'VULNERABILITY' | 'SCORECARD' | 'SBOM_LICENSE' | 'SBOM_VULNERABILITY' | 'TYPOSQUAT' | 'MALWARE';
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
   reason: string;
   details: string[];
