@@ -27,7 +27,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:setup": "node scripts/check-setup.mjs",
-    "check:smoke": "node scripts/smoke.mjs"
+    "check:smoke": "node scripts/smoke.mjs",
+    "eval:typosquat": "vitest run test/typosquat-eval.test.ts"
   },
   "keywords": [
     "oss",
