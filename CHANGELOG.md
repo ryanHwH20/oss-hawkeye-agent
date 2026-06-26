@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Authenticated, private on-disk cache.** The cross-process cache fed verdict
+  inputs (licenses, dependency graph) but was unauthenticated — a local process
+  (e.g. a malicious `postinstall`) could forge an entry to downgrade a BLOCKED
+  package to SAFE. Entries are now HMAC-authenticated with a per-cache `0600`
+  key and bound to their URL (a tampered/forged/cross-URL entry is rejected as a
+  miss), and the cache moved from shared `/tmp` to a private `0700` directory
+  (`$XDG_CACHE_HOME/hawkeye` or `~/.cache/hawkeye`) with `0600` files. This
+  defeats cross-user and blind forgery; same-user code execution remains out of
+  scope (it can disable the guardrail outright).
+
 ### Added
 - **Official GitHub Action + PR comment bot (#24).** A composite action
   ([`action.yml`](action.yml)) scans a project on every pull request, uploads
