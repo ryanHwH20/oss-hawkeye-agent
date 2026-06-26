@@ -158,7 +158,7 @@ node dist/cli.js scan ./my-app    # scan a specific path
 node dist/cli.js scan . --sarif > hawkeye.sarif
 ```
 
-`scan` auto-detects `package.json` (NPM) and `requirements.txt` (PyPI), audits each dependency, and returns an aggregated verdict with the same fail-closed exit codes (`0` / `1` / `2`). `--json` and `--sarif` work here too.
+`scan` auto-detects `package.json` (NPM) and `requirements.txt` (PyPI), audits each dependency, and returns an aggregated verdict with the same fail-closed exit codes (`0` / `1` / `2`). `--json` and `--sarif` work here too. When a `package-lock.json` (or `npm-shrinkwrap.json`) is present it is preferred, so Hawkeye audits the **resolved** versions npm will actually install — not the declared range.
 
 ### GitHub Action + PR comment bot
 

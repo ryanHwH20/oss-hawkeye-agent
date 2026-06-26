@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Audit the installed version, not the declared range (lockfile-aware scan).**
+  `hawkeye scan` now prefers `package-lock.json` / `npm-shrinkwrap.json` over
+  `package.json` when present, auditing each direct dependency at the version npm
+  will actually install (e.g. `^4.17.1` → the resolved `4.21.2`) instead of the
+  range floor. Closes the "audited declared, not installed" gap for npm; the
+  manifest is still used when no lockfile exists.
 - **Typosquat detection evaluation harness.** The product's core claim is
   precision, so it is now measured, not asserted. A labeled corpus
   (`test/fixtures/typosquat-eval.json`) drives a CI-gating test
