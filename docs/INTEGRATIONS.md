@@ -34,6 +34,39 @@ and passes**, so the agent is never sent to a "fix" that is itself blocked. When
 no clean version exists (e.g. a vulnerable transitive dependency), the action
 degrades to `find-alternative` with an honest reason.
 
+## Documented exceptions (the governed escape hatch)
+
+When a block is a known, accepted risk, don't rip the guardrail out — record an
+exception. Drop a `.hawkeye-exceptions.yaml` in the repo:
+
+```yaml
+exceptions:
+  - package: express
+    ecosystem: NPM          # optional — restrict to one ecosystem
+    version: "4.16.0"       # optional — omit to accept any version (broader)
+    reason: "Legacy billing service; migration tracked in JIRA-1234"  # required
+    approvedBy: security-team
+    expires: "2026-12-31T23:59:59Z"   # optional — after this it is inert
+```
+
+A matching, non-expired exception turns that package's block into an **allowed
+override**: the install proceeds (exit 0) and is recorded as such. It is a
+*human* artifact committed to the repo — an AI agent benefits from it but cannot
+grant itself one — and it **fails closed**: an expired or malformed exception
+never applies.
+
+## Audit log / telemetry
+
+Set `HAWKEYE_AUDIT_LOG=/path/to/audit.jsonl` to append one JSON record per
+`check-command` decision:
+
+```json
+{"ts":"…","event":"check-command","command":"npm install express@4.16.0","system":"NPM","decision":"override","verdict":"BLOCKED","packages":[{"name":"express","version":"4.16.0","verdict":"BLOCKED","override":"Legacy billing service…","approvedBy":"security-team"}]}
+```
+
+`decision` is `allow` | `block` | `override`. Point it at a central path to
+measure block rate, override rate, and fix conversion across the org.
+
 ## Claude Code (PreToolUse hook) — recommended
 
 A [PreToolUse hook](https://docs.claude.com/en/docs/claude-code/hooks) runs

@@ -116,6 +116,29 @@ describe('auditCommand — install guardrail (issue #26)', () => {
     expect(a.remediation[0].reason).toContain('does not pass audit');
   });
 
+  it('lets a documented exception override a block (effective allow, recorded)', async () => {
+    stubPackage('gplpkg', 'GPL-3.0-only');
+    const a = await auditCommand('npm install gplpkg@1.0.0', policy, [
+      { package: 'gplpkg', reason: 'Legacy; approved migration', approvedBy: 'sec' },
+    ]);
+    expect(a.verdict).toBe('BLOCKED'); // raw finding unchanged
+    expect(a.effectiveVerdict).toBe('SAFE'); // enforced outcome: allowed
+    expect(a.overrides).toHaveLength(1);
+    expect(a.overrides[0].originalVerdict).toBe('BLOCKED');
+    expect(a.overrides[0].reason).toContain('Legacy');
+    // An overridden package is no longer offered remediation.
+    expect(a.remediation).toHaveLength(0);
+  });
+
+  it('does not override when the exception is expired (stays blocked)', async () => {
+    stubPackage('gplpkg', 'GPL-3.0-only');
+    const a = await auditCommand('npm install gplpkg@1.0.0', policy, [
+      { package: 'gplpkg', reason: 'Lapsed', expires: '2000-01-01' },
+    ]);
+    expect(a.effectiveVerdict).toBe('BLOCKED');
+    expect(a.overrides).toHaveLength(0);
+  });
+
   it('fails closed (UNKNOWN) when a source is unreachable', async () => {
     vi.stubGlobal('fetch', async (url: string) => {
       const u = String(url);
