@@ -160,6 +160,36 @@ node dist/cli.js scan . --sarif > hawkeye.sarif
 
 `scan` auto-detects `package.json` (NPM) and `requirements.txt` (PyPI), audits each dependency, and returns an aggregated verdict with the same fail-closed exit codes (`0` / `1` / `2`). `--json` and `--sarif` work here too.
 
+### GitHub Action + PR comment bot
+
+Run Hawkeye on every pull request: it scans the project, **uploads SARIF** to
+GitHub code scanning, and posts a **sticky PR comment** (updated in place on each
+push) with the verdict. It fails closed by default.
+
+```yaml
+# .github/workflows/hawkeye.yml
+name: Hawkeye
+on: [pull_request]
+permissions:
+  contents: read
+  pull-requests: write      # post the PR comment
+  security-events: write    # upload SARIF
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ryanHwH20/oss-hawkeye-agent@v1
+        with:
+          path: .
+          comment: 'true'         # sticky PR comment (default true)
+          upload-sarif: 'true'    # GitHub code scanning (default true)
+          fail-on-block: 'true'   # fail the job when BLOCKED/UNVERIFIED (default true)
+```
+
+The comment renders as a `scan` summary — e.g. `hawkeye scan . --comment` locally
+produces the same Markdown.
+
 ---
 
 ## 🤖 Skill + CLI Integration

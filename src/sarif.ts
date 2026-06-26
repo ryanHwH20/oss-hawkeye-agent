@@ -4,9 +4,9 @@ import type { CheckResult, Violation } from './types.js';
  * Map a Hawkeye audit result to SARIF 2.1.0 so it can be consumed by GitHub
  * Code Scanning and other SARIF-aware tooling.
  *
- * Single-package audits have no source-file location, so findings are attached
- * to a logical location (the package coordinate). File-level locations arrive
- * with whole-repo `hawkeye scan` (#23).
+ * Every finding carries a physical location (the manifest file for the
+ * package's ecosystem) — GitHub Code Scanning rejects results without one — plus
+ * a logical location with the package coordinate.
  */
 
 const TOOL_NAME = 'Hawkeye Agent';
@@ -32,6 +32,34 @@ function levelFor(v: Violation): 'error' | 'note' {
   return v.severity === 'LOW' ? 'note' : 'error';
 }
 
+/**
+ * The manifest file a dependency is declared in, by ecosystem. GitHub Code
+ * Scanning requires every result to carry a *physical* location, so we anchor
+ * dependency findings to the manifest where they'd be declared/fixed.
+ */
+function manifestUriFor(system: string): string {
+  switch (system.toUpperCase()) {
+    case 'PYPI': return 'requirements.txt';
+    case 'CARGO': return 'Cargo.toml';
+    case 'GO': return 'go.mod';
+    case 'RUBYGEMS': return 'Gemfile';
+    case 'MAVEN': return 'pom.xml';
+    case 'NUGET': return 'packages.config';
+    default: return 'package.json';
+  }
+}
+
+/** A SARIF location carrying both a physical anchor (required by code scanning) and the package coordinate. */
+function locationFor(system: string, fullyQualifiedName: string): object {
+  return {
+    physicalLocation: {
+      artifactLocation: { uri: manifestUriFor(system) },
+      region: { startLine: 1 },
+    },
+    logicalLocations: [{ fullyQualifiedName, kind: 'package' }],
+  };
+}
+
 /** The SARIF `result` objects for a single audited package. */
 function resultEntries(result: CheckResult): object[] {
   const pkg = `${result.name}@${result.version}`;
@@ -43,7 +71,7 @@ function resultEntries(result: CheckResult): object[] {
       ruleId: v.type,
       level: levelFor(v),
       message: { text: `${v.reason}: ${v.details.join(', ')}. ${v.riskExplanation}` },
-      locations: [{ logicalLocations: [{ fullyQualifiedName: affected, kind: 'package' }] }],
+      locations: [locationFor(result.system, affected)],
       partialFingerprints: { hawkeye: `${v.type}:${affected}` },
       properties: {
         ecosystem: result.system,
@@ -62,7 +90,7 @@ function resultEntries(result: CheckResult): object[] {
       ruleId: 'UNVERIFIED',
       level: 'error',
       message: { text: `Could not verify ${source}. Failing closed: ${pkg} was not confirmed safe.` },
-      locations: [{ logicalLocations: [{ fullyQualifiedName: pkg, kind: 'package' }] }],
+      locations: [locationFor(result.system, pkg)],
       partialFingerprints: { hawkeye: `UNVERIFIED:${source}:${pkg}` },
       properties: { ecosystem: result.system, package: pkg, source },
     });

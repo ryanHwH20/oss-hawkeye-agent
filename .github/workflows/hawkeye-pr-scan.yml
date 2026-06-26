@@ -1,0 +1,24 @@
+# Dogfood the official Hawkeye Action on our own PRs: scan dependencies, post a
+# sticky comment, and upload SARIF. Informational here (fail-on-block: false) so
+# a transient data-source hiccup never blocks a PR.
+name: Hawkeye PR Scan
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v4
+      - name: Hawkeye scan
+        uses: ./
+        with:
+          path: .
+          fail-on-block: 'false'

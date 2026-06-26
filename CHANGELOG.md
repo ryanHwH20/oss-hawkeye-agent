@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Official GitHub Action + PR comment bot (#24).** A composite action
+  ([`action.yml`](action.yml)) scans a project on every pull request, uploads
+  SARIF to GitHub code scanning, and posts a **sticky PR comment** (updated in
+  place via a hidden marker, not stacked) with the verdict — failing closed by
+  default. The comment is rendered by a new `hawkeye scan . --comment` mode, so
+  the same Markdown is reproducible locally. The action builds from its own
+  pinned source and posts via the preinstalled `gh` CLI (no new third-party
+  action dependency); the repo dogfoods it in `.github/workflows/hawkeye-pr-scan.yml`.
 - **Typosquat / malicious-package detection (#28).** A package whose name is a
   one-edit look-alike (or a separator/case variant) of a popular package — e.g.
   `expres` for `express`, `requets` for `requests`, `lo-dash` for `lodash` — is
