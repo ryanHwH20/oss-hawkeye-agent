@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Optional resident daemon (`hawkeye daemon`) — near-instant repeat installs.**
+  The install gate spawns a fresh process per call, so even with the disk cache
+  each install pays startup, disk I/O, and a cold connection. A long-lived
+  daemon holds caches warm and **memoizes recent verdicts**: a repeated or
+  retried `check-command` drops from **~0.9s to ~0.05s** (measured) — under the
+  "invisible" threshold. Entirely optional and safe: callers fall back to an
+  in-process audit when no daemon runs, and policy/exceptions are sent per
+  request so the daemon never applies the wrong project's policy. Socket is
+  private (`0600`) in the user cache dir; the daemon idles out after 15 min.
 - **`hawkeye audit-report` — telemetry you can measure.** Aggregates one or more
   `HAWKEYE_AUDIT_LOG` JSONL files into the metrics an org cares about: total
   decisions, **block rate**, **override rate** (how often a would-be block is
