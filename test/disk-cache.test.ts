@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -10,6 +11,9 @@ import {
   diskCacheEnabled,
 } from '../src/util/disk-cache.js';
 import { getVersionInfo, __resetCaches } from '../src/api/deps-dev.js';
+
+const fileFor = (d: string, url: string) =>
+  join(d, `${createHash('sha256').update(url).digest('hex')}.json`);
 
 // A version-pinned deps.dev URL (cacheable) and a project/scorecard URL.
 const versionUrl = (name: string, v: string) =>
@@ -65,6 +69,41 @@ describe('disk-cache module', () => {
     writeDisk(versionUrl('lodash', '4.17.21'), { licenses: ['MIT'] });
     clearDisk();
     expect(readDisk(versionUrl('lodash', '4.17.21'))).toBeUndefined();
+  });
+
+  it('rejects a tampered entry (integrity check)', () => {
+    const url = versionUrl('tampered', '1.0.0');
+    writeDisk(url, { licenses: ['GPL-3.0-only'] });
+    // Attacker rewrites the payload to look clean, keeping the old MAC.
+    const f = fileFor(dir, url);
+    const entry = JSON.parse(readFileSync(f, 'utf8'));
+    entry.value = { licenses: ['MIT'] };
+    writeFileSync(f, JSON.stringify(entry));
+    expect(readDisk(url)).toBeUndefined();
+  });
+
+  it('rejects a forged entry whose MAC was not produced with the key', () => {
+    writeDisk(versionUrl('seed', '1.0.0'), { licenses: ['MIT'] }); // ensures a key exists
+    const url = versionUrl('forged', '1.0.0');
+    const forged = { v: 2, url, expiresAt: Date.now() + 1e6, value: { licenses: ['MIT'] }, mac: 'deadbeef' };
+    writeFileSync(fileFor(dir, url), JSON.stringify(forged));
+    expect(readDisk(url)).toBeUndefined();
+  });
+
+  it('rejects an entry whose stored url does not match (no cross-url reuse)', () => {
+    const realUrl = versionUrl('real', '1.0.0');
+    writeDisk(realUrl, { licenses: ['MIT'] });
+    // Copy a valid entry to a different URL's file slot.
+    const otherUrl = versionUrl('other', '1.0.0');
+    writeFileSync(fileFor(dir, otherUrl), readFileSync(fileFor(dir, realUrl)));
+    expect(readDisk(otherUrl)).toBeUndefined();
+  });
+
+  it.runIf(process.platform !== 'win32')('writes with restrictive permissions (0700 dir / 0600 files)', () => {
+    writeDisk(versionUrl('perms', '1.0.0'), { licenses: ['MIT'] });
+    expect(statSync(dir).mode & 0o777).toBe(0o700);
+    const f = readdirSync(dir).find(n => n.endsWith('.json'))!;
+    expect(statSync(join(dir, f)).mode & 0o777).toBe(0o600);
   });
 
   it('reflects HAWKEYE_NO_CACHE in diskCacheEnabled()', () => {
