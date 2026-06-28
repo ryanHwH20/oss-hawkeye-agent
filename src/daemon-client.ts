@@ -2,7 +2,7 @@ import { connect } from 'node:net';
 import type { CommandAudit } from './command.js';
 import type { Policy } from './types.js';
 import type { Exception } from './util/exceptions.js';
-import { socketPath } from './daemon.js';
+import { socketPath, DAEMON_VERSION } from './daemon.js';
 
 /**
  * Ask a running daemon to audit a command. Returns the audit, or null if no
@@ -30,7 +30,7 @@ export function daemonAudit(
 
     let buf = '';
     sock.on('connect', () => {
-      sock.write(JSON.stringify({ op: 'audit', command, policy, exceptions }) + '\n');
+      sock.write(JSON.stringify({ op: 'audit', v: DAEMON_VERSION, command, policy, exceptions }) + '\n');
     });
     sock.on('data', chunk => {
       buf += chunk;
