@@ -652,6 +652,13 @@ export function formatScanReport(report: ScanReport): string {
     lines.push('');
   }
 
+  if (report.weakIntegrity.length > 0) {
+    lines.push('## 🔓 Weak integrity (advisory)');
+    lines.push('These lockfile entries have no integrity hash, so npm will not verify the installed bytes:');
+    for (const n of report.weakIntegrity) lines.push(`- \`${n}\``);
+    lines.push('');
+  }
+
   return lines.join('\n');
 }
 
@@ -703,6 +710,13 @@ export function formatScanComment(report: ScanReport): string {
 
   if (blocked.length === 0 && unknown.length === 0) {
     lines.push('> ✅ All dependencies passed Hawkeye’s supply-chain checks — license, CVE/CVSS, OpenSSF Scorecard, transitive SBOM, and typosquat.', '');
+  }
+
+  if (report.weakIntegrity.length > 0) {
+    lines.push(`<details><summary><strong>🔓 Weak integrity — no hash (${report.weakIntegrity.length})</strong></summary>`, '',
+      'npm will not verify the installed bytes for these lockfile entries:', '');
+    for (const n of report.weakIntegrity) lines.push(`- \`${n}\``);
+    lines.push('', '</details>', '');
   }
 
   lines.push('---',

@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   older-version daemon by asking it to shut down.
 
 ### Added
+- **Weak-integrity advisory in `scan`.** A lockfile dependency with no
+  `integrity` hash means npm won't cryptographically verify the bytes it
+  installs — so what runs may differ from what was audited (a TOCTOU gap). The
+  scan now lists such resolved entries as an advisory (it doesn't change the
+  verdict: non-registry deps legitimately lack one). A bounded step toward
+  "audited == installed"; full artifact-hash verification remains future work.
 - **Optional resident daemon (`hawkeye daemon`) — near-instant repeat installs.**
   The install gate spawns a fresh process per call, so even with the disk cache
   each install pays startup, disk I/O, and a cold connection. A long-lived

@@ -7,6 +7,8 @@ export interface ManifestDependency {
   ecosystem: string;
   name: string;
   version?: string;
+  /** Subresource-integrity hash from a lockfile, if present (npm verifies it on install). */
+  integrity?: string;
 }
 
 export interface ParsedManifest {
@@ -72,7 +74,8 @@ export function parsePackageLock(content: string): ManifestDependency[] {
     for (const name of directNames) {
       const entry = packages[`node_modules/${name}`];
       const version = typeof entry?.version === 'string' ? entry.version : undefined;
-      deps.push({ ecosystem: 'NPM', name, version });
+      const integrity = typeof entry?.integrity === 'string' ? entry.integrity : undefined;
+      deps.push({ ecosystem: 'NPM', name, version, integrity });
     }
     return deps;
   }
@@ -82,7 +85,8 @@ export function parsePackageLock(content: string): ManifestDependency[] {
   if (v1 && typeof v1 === 'object') {
     for (const [name, info] of Object.entries<Record<string, unknown>>(v1)) {
       const version = typeof info?.version === 'string' ? info.version : undefined;
-      deps.push({ ecosystem: 'NPM', name, version });
+      const integrity = typeof info?.integrity === 'string' ? info.integrity : undefined;
+      deps.push({ ecosystem: 'NPM', name, version, integrity });
     }
   }
   return deps;
