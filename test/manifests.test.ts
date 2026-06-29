@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parsePackageJson, parseRequirementsTxt, parsePackageLock, detectManifests } from '../src/scan/manifests.js';
+import { lockfileWeakIntegrity } from '../src/scan/scan.js';
 
 describe('parsePackageJson (issue #23)', () => {
   it('extracts dependencies + devDependencies and reduces ranges to concrete versions', () => {
@@ -58,8 +59,36 @@ describe('parsePackageLock — resolved versions (Staff review #3)', () => {
       dependencies: { lodash: { version: '4.17.21' }, chalk: { version: '4.1.2' } },
     });
     const deps = parsePackageLock(lock);
-    expect(deps).toContainEqual({ ecosystem: 'NPM', name: 'lodash', version: '4.17.21' });
-    expect(deps).toContainEqual({ ecosystem: 'NPM', name: 'chalk', version: '4.1.2' });
+    expect(deps).toContainEqual({ ecosystem: 'NPM', name: 'lodash', version: '4.17.21', integrity: undefined });
+    expect(deps).toContainEqual({ ecosystem: 'NPM', name: 'chalk', version: '4.1.2', integrity: undefined });
+  });
+
+  it('captures the integrity hash when present, undefined when absent', () => {
+    const lock = JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        '': { dependencies: { signed: '^1.0.0', unsigned: '^1.0.0' } },
+        'node_modules/signed': { version: '1.0.0', integrity: 'sha512-abc' },
+        'node_modules/unsigned': { version: '1.0.0' },
+      },
+    });
+    const deps = parsePackageLock(lock);
+    expect(deps.find(d => d.name === 'signed')?.integrity).toBe('sha512-abc');
+    expect(deps.find(d => d.name === 'unsigned')?.integrity).toBeUndefined();
+  });
+});
+
+describe('lockfileWeakIntegrity', () => {
+  it('flags only resolved lockfile deps that lack an integrity hash', () => {
+    const weak = lockfileWeakIntegrity([
+      { file: 'package-lock.json', dependencies: [
+        { ecosystem: 'NPM', name: 'signed', version: '1.0.0', integrity: 'sha512-x' },
+        { ecosystem: 'NPM', name: 'unsigned', version: '2.0.0' },
+        { ecosystem: 'NPM', name: 'noversion' }, // unresolved (git/file) — not flagged
+      ] },
+      { file: 'package.json', dependencies: [{ ecosystem: 'NPM', name: 'fromjson', version: '1.0.0' }] }, // not a lockfile
+    ]);
+    expect(weak).toEqual(['unsigned@2.0.0']);
   });
 });
 

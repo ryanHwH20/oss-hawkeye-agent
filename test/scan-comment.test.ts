@@ -13,10 +13,11 @@ function res(partial: Partial<CheckResult>): CheckResult {
   };
 }
 
-const report = (results: CheckResult[]): ScanReport => ({
+const report = (results: CheckResult[], weakIntegrity: string[] = []): ScanReport => ({
   path: '.', manifests: ['package.json'], results,
   verdict: results.some(r => r.verdict === 'BLOCKED') ? 'BLOCKED'
     : results.some(r => r.verdict === 'UNKNOWN') ? 'UNKNOWN' : 'SAFE',
+  weakIntegrity,
 });
 
 describe('formatScanComment', () => {
@@ -49,5 +50,11 @@ describe('formatScanComment', () => {
     const c = formatScanComment(report([unk]));
     expect(c).toContain('⚠️ Unverified');
     expect(c).toContain('Vulnerabilities (OSV)');
+  });
+
+  it('surfaces weak-integrity lockfile entries (advisory)', () => {
+    const c = formatScanComment(report([res({})], ['foo@1.0.0']));
+    expect(c).toContain('Weak integrity');
+    expect(c).toContain('`foo@1.0.0`');
   });
 });
