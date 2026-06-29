@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Server } from 'node:net';
-import { createDaemonServer } from '../src/daemon.js';
+import { connect } from 'node:net';
+import { createDaemonServer, DAEMON_VERSION } from '../src/daemon.js';
 import { daemonAudit } from '../src/daemon-client.js';
 import type { Policy } from '../src/types.js';
 import type { CommandAudit } from '../src/command.js';
@@ -54,6 +55,26 @@ describe('daemon', () => {
     await daemonAudit('npm install pol-y', policy, []);
     await daemonAudit('npm install pol-y', { ...policy, minBlockingSeverity: 'LOW' }, []);
     expect(calls).toBe(2);
+  });
+
+  // Raw request helper to exercise the protocol directly.
+  const raw = (obj: unknown): Promise<any> => new Promise(resolve => {
+    const sock = connect(process.env.HAWKEYE_DAEMON_SOCK!);
+    let buf = '';
+    sock.on('connect', () => sock.write(JSON.stringify(obj) + '\n'));
+    sock.on('data', c => { buf += c; const nl = buf.indexOf('\n'); if (nl >= 0) { sock.destroy(); resolve(JSON.parse(buf.slice(0, nl))); } });
+    sock.on('error', () => resolve(null));
+  });
+
+  it('ping reports the daemon version', async () => {
+    const res = await raw({ op: 'ping' });
+    expect(res).toMatchObject({ ok: true, version: DAEMON_VERSION });
+  });
+
+  it('rejects an audit request from a mismatched version (client will fall back)', async () => {
+    const res = await raw({ op: 'audit', v: 'wrong/p0', command: 'npm install x', policy });
+    expect(res.ok).toBe(false);
+    expect(res.error).toBe('version-mismatch');
   });
 
   it('returns null when no daemon is reachable (caller falls back)', async () => {

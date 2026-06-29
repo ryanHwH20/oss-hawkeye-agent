@@ -10,15 +10,31 @@
  * request, so the daemon never applies the wrong project's policy.
  */
 import { createServer, type Server, connect } from 'node:net';
-import { mkdirSync, chmodSync, unlinkSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, chmodSync, unlinkSync, readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { CommandAudit } from './command.js';
 import type { Policy } from './types.js';
 import type { Exception } from './util/exceptions.js';
 import { cacheRoot } from './util/disk-cache.js';
 
+function pkgVersion(): string {
+  try {
+    return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8')).version;
+  } catch {
+    return '0';
+  }
+}
+
+// Identifies the daemon's code/protocol. A client whose version differs ignores
+// the daemon and audits in-process, so a stale daemon left running after an
+// upgrade can never serve a verdict from outdated audit logic. Bump the `/pN`
+// suffix when the protocol or audit semantics change within the same release.
+export const DAEMON_VERSION = `${pkgVersion()}/p1`;
+
 export interface AuditRequest {
-  op: 'audit' | 'ping';
+  op: 'audit' | 'ping' | 'shutdown';
+  v?: string;
   command?: string;
   policy?: Policy;
   exceptions?: Exception[];
@@ -72,9 +88,21 @@ export function createDaemonServer(
     try { req = JSON.parse(line); } catch { socket.write('{"ok":false,"error":"bad request"}\n'); return; }
     resetIdle();
 
-    if (req.op === 'ping') { socket.write('{"ok":true}\n'); return; }
+    if (req.op === 'ping') { socket.write(JSON.stringify({ ok: true, version: DAEMON_VERSION }) + '\n'); return; }
+    if (req.op === 'shutdown') {
+      socket.write('{"ok":true}\n');
+      server.close();
+      if (opts.onIdle) opts.onIdle();
+      return;
+    }
     if (req.op !== 'audit' || typeof req.command !== 'string' || !req.policy) {
       socket.write('{"ok":false,"error":"unsupported"}\n');
+      return;
+    }
+    // Refuse requests from a different version — the client will fall back to an
+    // in-process audit rather than trust a stale daemon's logic.
+    if (req.v !== DAEMON_VERSION) {
+      socket.write(JSON.stringify({ ok: false, error: 'version-mismatch', version: DAEMON_VERSION }) + '\n');
       return;
     }
 
@@ -104,10 +132,16 @@ export async function startDaemon(): Promise<void> {
   const path = socketPath();
   try { mkdirSync(cacheRoot(), { recursive: true, mode: 0o700 }); } catch { /* ignore */ }
 
-  // If a live daemon already owns the socket, defer to it; if it's stale, clear it.
-  if (await ping(path)) {
-    console.error('Hawkeye daemon already running.');
-    return;
+  // If a live daemon already owns the socket: defer when it's our version, but
+  // take over a different (e.g. pre-upgrade) version by asking it to shut down.
+  const running = await ping(path);
+  if (running) {
+    if (running === DAEMON_VERSION) {
+      console.error('Hawkeye daemon already running.');
+      return;
+    }
+    console.error(`Replacing daemon ${running} with ${DAEMON_VERSION}…`);
+    await requestShutdown(path);
   }
   try { unlinkSync(path); } catch { /* no stale socket */ }
 
@@ -130,17 +164,36 @@ export async function startDaemon(): Promise<void> {
   process.on('SIGTERM', shutdown);
 }
 
-/** Is a live daemon answering on `path`? */
-function ping(path: string, timeoutMs = 500): Promise<boolean> {
+/** The version of a live daemon on `path`, or null if none answers. */
+function ping(path: string, timeoutMs = 500): Promise<string | null> {
   return new Promise(resolve => {
     const sock = connect(path);
-    const done = (v: boolean) => { try { sock.destroy(); } catch { /* */ } resolve(v); };
-    const timer = setTimeout(() => done(false), timeoutMs);
+    let buf = '';
+    const done = (v: string | null) => { try { sock.destroy(); } catch { /* */ } resolve(v); };
+    const timer = setTimeout(() => done(null), timeoutMs);
     timer.unref?.();
-    sock.on('connect', () => {
-      sock.write('{"op":"ping"}\n');
-      sock.once('data', () => { clearTimeout(timer); done(true); });
+    sock.on('connect', () => sock.write('{"op":"ping"}\n'));
+    sock.on('data', chunk => {
+      buf += chunk;
+      const nl = buf.indexOf('\n');
+      if (nl < 0) return;
+      clearTimeout(timer);
+      try { const r = JSON.parse(buf.slice(0, nl)); done(r?.ok ? (r.version ?? 'unknown') : null); }
+      catch { done(null); }
     });
-    sock.on('error', () => { clearTimeout(timer); done(false); });
+    sock.on('error', () => { clearTimeout(timer); done(null); });
+  });
+}
+
+/** Ask a running daemon to shut down, then wait briefly for it to release the socket. */
+function requestShutdown(path: string, timeoutMs = 1500): Promise<void> {
+  return new Promise(resolve => {
+    const sock = connect(path);
+    const done = () => { try { sock.destroy(); } catch { /* */ } resolve(); };
+    const timer = setTimeout(done, timeoutMs);
+    timer.unref?.();
+    sock.on('connect', () => sock.write('{"op":"shutdown"}\n'));
+    sock.on('data', () => { clearTimeout(timer); done(); });
+    sock.on('error', () => { clearTimeout(timer); done(); });
   });
 }

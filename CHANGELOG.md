@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   can't be verified and are honored. A same-machine attacker who can forge
   commits is out of scope — but the abuse is then in git history.
 
+### Fixed
+- **Daemon version-skew protection.** A daemon left running after an upgrade
+  could serve verdicts from stale audit logic. The daemon and client now
+  exchange a version; a client ignores a mismatched daemon and audits in-process
+  (never trusting outdated logic), and `hawkeye daemon` takes over an
+  older-version daemon by asking it to shut down.
+
 ### Added
 - **Optional resident daemon (`hawkeye daemon`) — near-instant repeat installs.**
   The install gate spawns a fresh process per call, so even with the disk cache
