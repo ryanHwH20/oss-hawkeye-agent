@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Brand identity — "Centre Court".** A full visual system in a heritage,
+  grass-court tennis register: a medallion-seal-plus-reticle-eye logo (*"every
+  install, called"*), deep grass green `#154734` + championship gold on warm
+  paper, and a serif logotype. Ships as scalable SVG — mark, crest tile,
+  light/dark horizontal lockups, light/dark README banners, a 1280×640 social
+  card, and a 16-px-legible favicon set (`favicon.svg`, `favicon-16…512.png`,
+  `apple-touch-icon.png`, multi-size `favicon.ico`). The brand hue is
+  deliberately status-neutral so the SAFE/UNKNOWN/BLOCKED verdict colours keep
+  their meaning. Documented in [`BRAND.md`](BRAND.md); the README hero is now
+  theme-aware via `<picture>`.
+- **Branded terminal output.** Interactive `check`, `scan`, and `check-command`
+  runs now carry a branded header and verdict colours (SAFE emerald, UNKNOWN
+  amber, BLOCKED red). Colour is gated on a TTY and the usual opt-outs
+  (`NO_COLOR`, `TERM=dumb`), so Markdown, SARIF, JSON, piped output, CI logs,
+  and the non-TTY AI-agent install hook all receive byte-identical text.
+- **Opt-in live OSV malware smoke test.** `npm run test:live` (gated by
+  `HAWKEYE_LIVE=1`) checks real `MAL-` advisories end-to-end against the live
+  OSV API, closing the "malware detection never validated against live data"
+  gap. Skipped by default so CI stays hermetic.
+
 ## [1.2.0] - 2026-06-30
 
 The **v2.0 AI-Agent Guardrail** line: an enforced, self-correcting, governed, and
