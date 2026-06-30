@@ -6,9 +6,9 @@
       <stop offset="1" stop-color="#9C7822"/>
     </linearGradient>
   </defs>
-  <!-- aubergine crest tile -->
-  <rect width="256" height="256" rx="56" fill="#2E2042"/>
-  <rect x="14" y="14" width="228" height="228" rx="44" stroke="url(#gold)" stroke-width="1.5" stroke-opacity="0.45" fill="none"/>
+  <!-- forest-green crest tile -->
+  <rect width="256" height="256" rx="56" fill="#0F3A2A"/>
+  <rect x="14" y="14" width="228" height="228" rx="44" stroke="url(#gold)" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
   <g transform="translate(40,40) scale(2.75)">
     <circle cx="32" cy="32" r="29" stroke="#F3ECDD" stroke-width="2.2" fill="none"/>
     <circle cx="32" cy="32" r="25.2" stroke="url(#gold)" stroke-width="1" fill="none"/>
