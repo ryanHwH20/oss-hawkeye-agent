@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-30
+
+The **v2.0 AI-Agent Guardrail** line: an enforced, self-correcting, governed, and
+hardened gate for AI-agent (and human) package installs — plus the supporting
+performance, integrity, and measurement work. 151-test suite.
+
 ### Security
 - **Exceptions require git provenance — a gated agent can't self-grant one.**
   The override escape hatch was just a file in the repo, which an AI agent (the
@@ -231,7 +237,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Policy-as-Code via `.audit-agent.yaml`.
 - In-memory caching layer with TTL for API responses.
 
-[Unreleased]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.0...v1.0.1

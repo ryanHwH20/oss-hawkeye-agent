@@ -280,10 +280,10 @@ Our strategy and positioning live in **[docs/VISION.md](docs/VISION.md)**; the l
 
 | Milestone | Focus | Status |
 | :--- | :--- | :--- |
-| **v1.1 — Trustworthy Core** | Fail-closed `SAFE` / `BLOCKED` / `UNKNOWN` verdict, request timeouts + retries, distinct exit codes, bounded concurrency + OSV batching, 36-test suite | ✅ Shipped |
-| **v1.2 — CI-Ready Integration** | `--json` / `--sarif` output, SPDX-aware license matching, configurable severity threshold | 🔜 In progress |
-| **v1.3 — Meet Developers Where They Are** | `hawkeye scan` (whole repo), official GitHub Action + PR comment bot, frictionless `npx` / Docker / pre-commit | 🚀 Planned |
-| **v2.0 — AI-Agent Guardrail** | MCP enforcement gate, AI-assisted remediation PRs, malware / typosquat detection, shared policy registry | 🔮 Planned |
+| **v1.1 — Trustworthy Core** | Fail-closed `SAFE` / `BLOCKED` / `UNKNOWN` verdict, request timeouts + retries, distinct exit codes, bounded concurrency + OSV batching | ✅ Shipped |
+| **v1.x — CI-Ready Integration** | `--json` / `--sarif` output, SPDX-aware license matching, configurable severity threshold, `hawkeye scan` (lockfile-aware), official GitHub Action + PR comment bot | ✅ Shipped |
+| **v1.2 — AI-Agent Guardrail** | Enforced install gate (PreToolUse hook), self-correcting remediation, governed git-provenanced exceptions + telemetry, malware / typosquat detection, cross-process cache + resident daemon | ✅ Shipped |
+| **Next** | MCP enforcement gate, AI-assisted remediation PRs, shared policy registry, broader lockfile/ecosystem coverage, cross-org learning loop | 🔮 Planned |
 
 > 💡 **Have an idea?** [Open an issue](https://github.com/ryanHwH20/oss-hawkeye-agent/issues) or submit a PR — contributions are welcome!
 
