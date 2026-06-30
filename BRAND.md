@@ -4,10 +4,12 @@
 
 # Hawkeye — Brand Guideline
 
-The visual identity system for Hawkeye. Built in the Google / Material design
-language: light surfaces, generous whitespace, a confident blue primary, and the
-four Google accent colours used with intent. Everything ships as scalable SVG so
-it stays crisp from a 16&nbsp;px favicon to a conference banner.
+The visual identity system for Hawkeye. The direction is **"Centre Court"** —
+heritage, precision, and quiet authority, in the spirit of the great officiating
+traditions of tennis. A medallion seal stands for *an indisputable call*; deep
+aubergine, championship gold, and warm paper give it class without noise.
+Everything ships as scalable SVG so it stays crisp from a 16&nbsp;px favicon to a
+conference banner.
 
 ---
 
@@ -18,73 +20,71 @@ it stays crisp from a 16&nbsp;px favicon to a conference banner.
 | **Name** | **Hawkeye** — after the Hawk-Eye officiating system that delivers indisputable, millimetre-accurate in/out calls. |
 | **One-liner** | The high-precision line-judge for your software supply chain. |
 | **Tagline** | *Every install, called.* |
-| **Personality** | Authoritative, precise, fast, calm. Clean and friendly, never alarmist or noisy. |
-| **What the logo says** | A targeting **reticle** fused with a **watchful eye** — constant watch + a precise verdict on every package. The four cardinal ticks carry the four Google colours, nodding from *watch* to *verdict*. |
+| **Personality** | Authoritative, precise, composed, heritage-grade. Confident and calm — never loud, never alarmist. |
+| **What the logo says** | A **medallion seal** (the authority of a final, indisputable verdict) around a **watchful reticle-eye** (precision + constant watch), with a single gold **focal point** — *the call*. The seal is also our answer to *fail-closed*: authority you can trust to withhold approval. |
 
 ---
 
 ## 2. Logo
 
 ### The mark
-A line-call **reticle** (ring + four cardinal ticks) wrapping an **iris and pupil**.
-It reads as both *a scope taking aim* and *an eye that never blinks*. The ring,
-iris and pupil are Google Blue; the four ticks are blue / red / yellow / green.
+A double-ring **medallion** — ink aubergine with a fine gold inlay — enclosing a
+**reticle-eye**: four cardinal ticks, an iris, and a gold pupil that is *the call*.
+It reads as an official seal and a watchful eye at once.
 
 ### Assets
 
 | File | Use |
 |---|---|
-| [`assets/logo-mark.svg`](assets/logo-mark.svg) | Icon only, transparent background. App icons, inline marks, favicon source. |
-| [`assets/logo-tile.svg`](assets/logo-tile.svg) | Mark on a white Material tile. Avatars, GitHub org icon. |
+| [`assets/logo-mark.svg`](assets/logo-mark.svg) | Medallion mark, transparent — for **light** backgrounds; favicon source. |
+| [`assets/logo-tile.svg`](assets/logo-tile.svg) | Crest tile (cream + gold medallion on aubergine). Avatars, GitHub org icon, dark backgrounds. |
 | [`assets/logo-horizontal-dark.svg`](assets/logo-horizontal-dark.svg) | Horizontal lockup for **dark** backgrounds. |
 | [`assets/logo-horizontal-light.svg`](assets/logo-horizontal-light.svg) | Horizontal lockup for **light** backgrounds. |
 | [`assets/banner.svg`](assets/banner.svg) | README / docs hero (1280×320). |
 | [`assets/social-preview.svg`](assets/social-preview.svg) · [`.png`](assets/social-preview.png) | GitHub social preview / Open Graph card (1280×640). Upload the PNG in **Settings → Social preview**. |
 
 ### Clearspace & minimum size
-- **Clearspace:** keep free space of at least one reticle-tick length on every side of the mark and the full lockup.
-- **Minimum size:** mark ≥ 24&nbsp;px; horizontal lockup ≥ 120&nbsp;px wide. Below that, prefer the mark alone.
+- **Clearspace:** keep free space of at least one reticle-tick length around the medallion and the full lockup.
+- **Minimum size:** medallion ≥ 28&nbsp;px (below this the gold inlay is decorative — the mark still reads); horizontal lockup ≥ 140&nbsp;px wide.
+- On dark surfaces use the **crest tile** or the cream medallion (`logo-horizontal-dark`), never the aubergine mark on dark.
 
 ### Don't
-- ❌ Recolour the mark's ring/iris outside Google Blue, or restyle the four tick colours.
-- ❌ Stretch, skew, rotate, or add heavy drop shadows / glows.
-- ❌ Put the blue mark on a saturated or low-contrast background; use the white tile.
-- ❌ Re-letter the wordmark in another typeface, or set "eye" in a non-blue colour.
+- ❌ Recolour the medallion or set the pupil in anything but gold.
+- ❌ Swap the serif wordmark for a sans, or stretch / skew / rotate the mark.
+- ❌ Add glows or heavy shadows — the texture is paper and gold, not neon.
+- ❌ Use the verdict colours (green / amber / red) anywhere in the logo.
 
 ---
 
 ## 3. Colour
 
-Light, Material, blue-led. The four Google colours appear in the mark; the
-traffic-light verdict colours are **reserved for status** and never used as decoration.
+Heritage and composed: **aubergine led, gold accent, warm paper ground.** The brand
+hue is deliberately *not* a status colour, so the traffic-light verdict palette
+keeps its meaning. Green / amber / red are **reserved for status** — never decoration.
 
 ### Core
 
 | Token | Hex | Role |
 |---|---|---|
-| `--blue` | `#1A73E8` | Primary — the mark, links, CTAs, "eye" |
-| `--blue-bright` | `#4285F4` | Gradient highlight, blue tick |
-| `--blue-on-dark` | `#8AB4F8` | Primary on dark surfaces |
-| `--ink` | `#202124` | Headings & wordmark on light |
-| `--grey` | `#5F6368` | Secondary / muted text |
-| `--surface` | `#FFFFFF` | Primary background |
-| `--surface-alt` | `#F8F9FA` | Panels, cards |
-| `--border` | `#DADCE0` | Tile / control borders |
-| `--hairline` | `#E8EAED` | Dividers |
-| `--paper` | `#E8EAED` | Headings & wordmark on dark |
-
-The mark's iris uses a blue gradient: `#4285F4 → #1A73E8`.
+| `--aubergine` | `#3A2750` | Primary — mark, wordmark, headings on light |
+| `--aubergine-deep` | `#2E2042` | Dark surfaces, crest tile |
+| `--gold` | `#B0892F` | Accent — inlay, pupil, rules (gradient `#D9B85C → #B0892F → #8A6A22`) |
+| `--gold-bright` | `#E7C977` | Gold on dark surfaces |
+| `--paper` | `#F6F1E7` | Primary light background |
+| `--ivory` | `#FBF8F1` | Cards, chips |
+| `--cream` | `#F3ECDD` | Mark / wordmark on dark |
+| `--ink` | `#2A2233` | Body text on light |
+| `--muted` | `#6E6378` | Secondary / italic text |
 
 ### Verdict signal system (status only)
 
-| Verdict | Dot | Chip fill | Meaning |
-|---|---|---|---|
-| 🟢 **SAFE** | `#34A853` | `#E6F4EA` | Cleared — exit 0 |
-| 🟡 **UNKNOWN** | `#F9AB00` | `#FEF7E0` | Could not verify — fail closed, exit 2 |
-| 🔴 **BLOCKED** | `#EA4335` | `#FCE8E6` | Out of bounds — exit 1 |
+Tuned to heritage tones so they sit on paper without shouting.
 
-> These are Google's standard status colours and light tints, so the verdict chips
-> read instantly to anyone fluent in Material.
+| Verdict | Hex | Meaning |
+|---|---|---|
+| 🟢 **SAFE** | `#0F7A43` | Cleared — exit 0 |
+| 🟡 **UNKNOWN** | `#C28A1B` | Could not verify — fail closed, exit 2 |
+| 🔴 **BLOCKED** | `#B23A3A` | Out of bounds — exit 1 |
 
 ---
 
@@ -92,13 +92,13 @@ The mark's iris uses a blue gradient: `#4285F4 → #1A73E8`.
 
 | Role | Typeface | Treatment |
 |---|---|---|
-| Wordmark / display | **Google Sans** / Product Sans (fallback: Roboto → system-ui) | 700 weight, sentence case "Hawkeye". "Hawk" in ink, "eye" in blue. |
-| Headings & UI | Google Sans / Roboto / system-ui | 500–700 |
-| Body | Roboto / system-ui stack | 400 |
-| Labels / chips | system stack, UPPERCASE | 600, light letter-spacing |
+| Wordmark / display | **Serif** — Georgia (fallback: Times New Roman → serif) | 700 weight, sentence case "Hawkeye". The heritage voice. |
+| Tagline / labels | Sans — Helvetica Neue / Arial / system-ui | 600, UPPERCASE, generous tracking. |
+| Descriptor | Serif *italic* — Georgia | The line under the wordmark; quietly editorial. |
+| Body & UI | system-ui / Helvetica stack | 400–600 |
 
-SVG assets reference a font stack rather than embedding a font, so they render with
-Google Sans where present and degrade gracefully to Roboto / system-ui.
+SVG assets reference a font stack rather than embedding a font, so the serif
+logotype renders with Georgia where present and degrades gracefully.
 
 ---
 
