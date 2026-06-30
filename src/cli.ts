@@ -10,6 +10,7 @@ import { recordAudit } from './util/audit-log.js';
 import { parseAuditLog, aggregateAudit, formatAuditReport } from './audit-report.js';
 import { loadExceptions } from './util/exceptions.js';
 import { daemonAudit } from './daemon-client.js';
+import { paint, brandHeader, colorEnabled } from './util/term.js';
 import { readFileSync } from 'node:fs';
 
 function usage(): never {
@@ -74,7 +75,8 @@ async function main() {
   const policy = loadPolicy();
 
   if (!machine) {
-    console.log(`🔍 Context-Aware Security Guardrail: Checking ${system}::${pkg}${version ? `@${version}` : ''}...`);
+    console.log(brandHeader());
+    console.log(paint.dim(`Checking ${system}::${pkg}${version ? `@${version}` : ''} …`));
   }
 
   const result = await checkPackage(system, pkg, version, policy);
@@ -90,13 +92,14 @@ async function main() {
   // Fail-closed: BLOCKED and UNKNOWN both exit non-zero. A security guardrail
   // must never return success when it could not actually verify the package.
   if (result.verdict === 'BLOCKED') {
-    if (!machine) console.error('\n❌ Audit failed: Blocking security or license issues found.');
+    if (!machine) console.error('\n' + paint.block(paint.bold('❌ Audit failed:') + ' Blocking security or license issues found.'));
     process.exit(1);
   } else if (result.verdict === 'UNKNOWN') {
-    console.error(`${machine ? '' : '\n'}⚠️  Audit incomplete: could not verify ${result.unverified.join(', ')}. Failing closed.`);
+    const msg = `⚠️  Audit incomplete: could not verify ${result.unverified.join(', ')}. Failing closed.`;
+    console.error(machine ? msg : '\n' + paint.warn(msg));
     process.exit(1);
   } else {
-    if (!machine) console.log('\n✅ Audit passed.');
+    if (!machine) console.log('\n' + paint.safe(paint.bold('✅ Audit passed.')));
     process.exit(0);
   }
 }
@@ -106,7 +109,8 @@ async function runScan(path: string | undefined, out: OutputMode): Promise<void>
   const policy = loadPolicy();
 
   if (!out.machine) {
-    console.error(`🔍 Scanning project at ${resolve(dir)}...`);
+    console.error(brandHeader());
+    console.error(paint.dim(`Scanning ${resolve(dir)} …`));
   }
 
   const report = await scanProject(dir, policy);
@@ -123,13 +127,14 @@ async function runScan(path: string | undefined, out: OutputMode): Promise<void>
 
   // Same fail-closed exit semantics as a single-package audit.
   if (report.verdict === 'BLOCKED') {
-    if (!out.machine) console.error('\n❌ Scan failed: one or more dependencies are blocked.');
+    if (!out.machine) console.error('\n' + paint.block(paint.bold('❌ Scan failed:') + ' one or more dependencies are blocked.'));
     process.exit(1);
   } else if (report.verdict === 'UNKNOWN') {
-    console.error(`${out.machine ? '' : '\n'}⚠️  Scan incomplete: some dependencies could not be verified. Failing closed.`);
+    const msg = '⚠️  Scan incomplete: some dependencies could not be verified. Failing closed.';
+    console.error(out.machine ? msg : '\n' + paint.warn(msg));
     process.exit(1);
   } else {
-    if (!out.machine) console.log('\n✅ Scan passed.');
+    if (!out.machine) console.log('\n' + paint.safe(paint.bold('✅ Scan passed.')));
     process.exit(0);
   }
 }
@@ -154,7 +159,12 @@ async function runCheckCommand(command: string | undefined, out: OutputMode): Pr
       : audit.effectiveVerdict === 'UNKNOWN' ? '⚠️ UNVERIFIED'
         : audit.overrides.length > 0 ? '⚠️ ALLOWED (documented exception)'
           : '✅ APPROVED';
-    console.log(`\n# 🎾 Install Check — ${badge}\n`);
+    // Colour the badge for humans at a TTY; non-TTY (hook/pipe) gets the exact
+    // same text so machine consumers are unaffected.
+    const tint = audit.effectiveVerdict === 'BLOCKED' ? paint.block
+      : audit.effectiveVerdict === 'UNKNOWN' ? paint.warn
+        : audit.overrides.length > 0 ? paint.warn : paint.safe;
+    console.log(`\n# 🎾 Install Check — ${colorEnabled() ? tint(badge) : badge}\n`);
     console.log(`\`${audit.command}\` → ${audit.system}\n`);
     for (const r of audit.results) {
       const b = r.verdict === 'BLOCKED' ? '❌' : r.verdict === 'UNKNOWN' ? '⚠️' : '✅';
