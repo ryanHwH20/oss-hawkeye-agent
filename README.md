@@ -1,5 +1,9 @@
 
-# 🎾 Hawkeye Agent
+<p align="center">
+  <img src="assets/banner.svg" alt="Hawkeye — the high-precision line-judge for your software supply chain" width="100%">
+</p>
+
+# Hawkeye Agent
 
 **The indisputable, high-precision line-judge for your software supply chain.**
 
