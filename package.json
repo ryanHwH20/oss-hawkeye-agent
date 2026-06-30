@@ -28,7 +28,8 @@
     "test:watch": "vitest",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs",
-    "eval:typosquat": "vitest run test/typosquat-eval.test.ts"
+    "eval:typosquat": "vitest run test/typosquat-eval.test.ts",
+    "test:live": "HAWKEYE_LIVE=1 vitest run test/malware-live.test.ts"
   },
   "keywords": [
     "oss",
