@@ -1,26 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" fill="none" role="img" aria-label="Hawkeye — every install, called">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 392 96" fill="none" role="img" aria-label="Hawkeye — every install, called">
   <defs>
-    <linearGradient id="blue" x1="20" y1="18" x2="60" y2="78" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#8AB4F8"/>
-      <stop offset="1" stop-color="#4285F4"/>
+    <linearGradient id="gold" x1="16" y1="18" x2="58" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E7C977"/>
+      <stop offset="1" stop-color="#B0892F"/>
     </linearGradient>
   </defs>
   <g transform="translate(14,16)">
-    <g stroke="url(#blue)" stroke-width="2.4" stroke-linecap="round" fill="none">
-      <circle cx="32" cy="32" r="25"/>
-      <circle cx="32" cy="32" r="11"/>
+    <circle cx="32" cy="32" r="29" stroke="#F3ECDD" stroke-width="2.2" fill="none"/>
+    <circle cx="32" cy="32" r="25.2" stroke="url(#gold)" stroke-width="1" fill="none"/>
+    <g stroke="#F3ECDD" stroke-width="2.4" stroke-linecap="round" fill="none">
+      <line x1="32" y1="13" x2="32" y2="19"/>
+      <line x1="45" y1="32" x2="51" y2="32"/>
+      <line x1="32" y1="45" x2="32" y2="51"/>
+      <line x1="13" y1="32" x2="19" y2="32"/>
+      <circle cx="32" cy="32" r="12"/>
     </g>
-    <g stroke-width="2.6" stroke-linecap="round">
-      <line x1="32" y1="9.5"  x2="32" y2="16"   stroke="#34A853"/>
-      <line x1="48"  y1="32"  x2="54.5" y2="32" stroke="#FBBC04"/>
-      <line x1="32" y1="48"   x2="32" y2="54.5" stroke="#EA4335"/>
-      <line x1="9.5" y1="32"  x2="16"  y2="32"  stroke="#8AB4F8"/>
-    </g>
-    <circle cx="32" cy="32" r="4.6" fill="url(#blue)"/>
-    <circle cx="29.9" cy="29.9" r="1.4" fill="#FFFFFF" fill-opacity="0.92"/>
+    <circle cx="32" cy="32" r="5" fill="url(#gold)"/>
+    <circle cx="30" cy="30" r="1.4" fill="#FBF8F1" fill-opacity="0.92"/>
   </g>
-  <text x="96" y="50" font-family="'Google Sans','Product Sans',Roboto,'Segoe UI',system-ui,Arial,sans-serif" font-size="37" font-weight="700" letter-spacing="-0.5">
-    <tspan fill="#E8EAED">Hawk</tspan><tspan fill="#8AB4F8">eye</tspan>
-  </text>
-  <text x="98" y="70" font-family="'Google Sans','Product Sans',Roboto,'Segoe UI',system-ui,Arial,sans-serif" font-size="10.5" font-weight="500" letter-spacing="3.6" fill="#9AA0A6">EVERY INSTALL, CALLED</text>
+  <text x="92" y="51" font-family="Georgia,'Times New Roman',serif" font-size="38" font-weight="700" letter-spacing="0.3" fill="#F3ECDD">Hawkeye</text>
+  <text x="94" y="71" font-family="'Helvetica Neue',Arial,system-ui,sans-serif" font-size="10" font-weight="600" letter-spacing="4" fill="#D9B85C">EVERY INSTALL, CALLED</text>
 </svg>
