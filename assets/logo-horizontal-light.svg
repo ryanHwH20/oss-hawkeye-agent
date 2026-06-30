@@ -7,9 +7,9 @@
     </linearGradient>
   </defs>
   <g transform="translate(14,16)">
-    <circle cx="32" cy="32" r="29" stroke="#3A2750" stroke-width="2.2" fill="none"/>
+    <circle cx="32" cy="32" r="29" stroke="#154734" stroke-width="2.2" fill="none"/>
     <circle cx="32" cy="32" r="25.2" stroke="url(#gold)" stroke-width="1" fill="none"/>
-    <g stroke="#3A2750" stroke-width="2.4" stroke-linecap="round" fill="none">
+    <g stroke="#154734" stroke-width="2.4" stroke-linecap="round" fill="none">
       <line x1="32" y1="13" x2="32" y2="19"/>
       <line x1="45" y1="32" x2="51" y2="32"/>
       <line x1="32" y1="45" x2="32" y2="51"/>
@@ -19,6 +19,6 @@
     <circle cx="32" cy="32" r="5" fill="url(#gold)"/>
     <circle cx="30" cy="30" r="1.4" fill="#FBF8F1" fill-opacity="0.92"/>
   </g>
-  <text x="92" y="51" font-family="Georgia,'Times New Roman',serif" font-size="38" font-weight="700" letter-spacing="0.3" fill="#3A2750">Hawkeye</text>
+  <text x="92" y="51" font-family="Georgia,'Times New Roman',serif" font-size="38" font-weight="700" letter-spacing="0.3" fill="#154734">Hawkeye</text>
   <text x="94" y="71" font-family="'Helvetica Neue',Arial,system-ui,sans-serif" font-size="10" font-weight="600" letter-spacing="4" fill="#8A6A22">EVERY INSTALL, CALLED</text>
 </svg>

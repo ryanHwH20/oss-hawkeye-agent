@@ -7,7 +7,7 @@
 The visual identity system for Hawkeye. The direction is **"Centre Court"** —
 heritage, precision, and quiet authority, in the spirit of the great officiating
 traditions of tennis. A medallion seal stands for *an indisputable call*; deep
-aubergine, championship gold, and warm paper give it class without noise.
+grass green, championship gold, and warm paper give it class without noise.
 Everything ships as scalable SVG so it stays crisp from a 16&nbsp;px favicon to a
 conference banner.
 
@@ -28,7 +28,7 @@ conference banner.
 ## 2. Logo
 
 ### The mark
-A double-ring **medallion** — ink aubergine with a fine gold inlay — enclosing a
+A double-ring **medallion** — deep grass green with a fine gold inlay — enclosing a
 **reticle-eye**: four cardinal ticks, an iris, and a gold pupil that is *the call*.
 It reads as an official seal and a watchful eye at once.
 
@@ -37,7 +37,7 @@ It reads as an official seal and a watchful eye at once.
 | File | Use |
 |---|---|
 | [`assets/logo-mark.svg`](assets/logo-mark.svg) | Medallion mark, transparent — for **light** backgrounds; favicon source. |
-| [`assets/logo-tile.svg`](assets/logo-tile.svg) | Crest tile (cream + gold medallion on aubergine). Avatars, GitHub org icon, dark backgrounds. |
+| [`assets/logo-tile.svg`](assets/logo-tile.svg) | Crest tile (cream + gold medallion on forest green). Avatars, GitHub org icon, dark backgrounds. |
 | [`assets/logo-horizontal-dark.svg`](assets/logo-horizontal-dark.svg) | Horizontal lockup for **dark** backgrounds. |
 | [`assets/logo-horizontal-light.svg`](assets/logo-horizontal-light.svg) | Horizontal lockup for **light** backgrounds. |
 | [`assets/banner.svg`](assets/banner.svg) | README / docs hero (1280×320). |
@@ -46,10 +46,10 @@ It reads as an official seal and a watchful eye at once.
 ### Clearspace & minimum size
 - **Clearspace:** keep free space of at least one reticle-tick length around the medallion and the full lockup.
 - **Minimum size:** medallion ≥ 28&nbsp;px (below this the gold inlay is decorative — the mark still reads); horizontal lockup ≥ 140&nbsp;px wide.
-- On dark surfaces use the **crest tile** or the cream medallion (`logo-horizontal-dark`), never the aubergine mark on dark.
+- On dark surfaces use the **crest tile** or the cream medallion (`logo-horizontal-dark`), never the green mark on dark.
 
 ### Don't
-- ❌ Recolour the medallion or set the pupil in anything but gold.
+- ❌ Recolour the medallion green or set the pupil in anything but gold.
 - ❌ Swap the serif wordmark for a sans, or stretch / skew / rotate the mark.
 - ❌ Add glows or heavy shadows — the texture is paper and gold, not neon.
 - ❌ Use the verdict colours (green / amber / red) anywhere in the logo.
@@ -58,31 +58,33 @@ It reads as an official seal and a watchful eye at once.
 
 ## 3. Colour
 
-Heritage and composed: **aubergine led, gold accent, warm paper ground.** The brand
-hue is deliberately *not* a status colour, so the traffic-light verdict palette
-keeps its meaning. Green / amber / red are **reserved for status** — never decoration.
+Heritage and composed: **grass green led, gold accent, warm paper ground.** The brand
+green is a deep, cool bottle green — kept tonally distinct from the brighter SAFE
+status emerald so the traffic-light verdict palette keeps its meaning. Status green /
+amber / red are **reserved for verdicts** — never decoration.
 
 ### Core
 
 | Token | Hex | Role |
 |---|---|---|
-| `--aubergine` | `#3A2750` | Primary — mark, wordmark, headings on light |
-| `--aubergine-deep` | `#2E2042` | Dark surfaces, crest tile |
+| `--green` | `#154734` | Primary — mark, wordmark, headings on light |
+| `--green-deep` | `#0F3A2A` | Dark surfaces, crest tile |
 | `--gold` | `#B0892F` | Accent — inlay, pupil, rules (gradient `#D9B85C → #B0892F → #8A6A22`) |
 | `--gold-bright` | `#E7C977` | Gold on dark surfaces |
 | `--paper` | `#F6F1E7` | Primary light background |
 | `--ivory` | `#FBF8F1` | Cards, chips |
 | `--cream` | `#F3ECDD` | Mark / wordmark on dark |
-| `--ink` | `#2A2233` | Body text on light |
-| `--muted` | `#6E6378` | Secondary / italic text |
+| `--ink` | `#23302A` | Body text on light |
+| `--muted` | `#5E6B5F` | Secondary / italic text |
 
 ### Verdict signal system (status only)
 
-Tuned to heritage tones so they sit on paper without shouting.
+Tuned to heritage tones so they sit on paper without shouting. SAFE is a brighter
+emerald than the brand green, so a verdict never reads as the logo.
 
 | Verdict | Hex | Meaning |
 |---|---|---|
-| 🟢 **SAFE** | `#0F7A43` | Cleared — exit 0 |
+| 🟢 **SAFE** | `#1F9D57` | Cleared — exit 0 |
 | 🟡 **UNKNOWN** | `#C28A1B` | Could not verify — fail closed, exit 2 |
 | 🔴 **BLOCKED** | `#B23A3A` | Out of bounds — exit 1 |
 
