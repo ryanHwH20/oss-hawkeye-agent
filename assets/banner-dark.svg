@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" fill="none" role="img" aria-label="Hawkeye — the high-precision line-judge for your software supply chain">
+  <defs>
+    <linearGradient id="gold" x1="96" y1="64" x2="280" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E7C977"/>
+      <stop offset="0.55" stop-color="#C9A227"/>
+      <stop offset="1" stop-color="#9C7822"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" fill="#0F3A2A"/>
+  <rect x="0.5" y="0.5" width="1279" height="319" stroke="url(#gold)" stroke-width="1" stroke-opacity="0.25" fill="none"/>
+
+  <!-- medallion mark (cream + gold on green) -->
+  <g transform="translate(96,64) scale(3)">
+    <circle cx="32" cy="32" r="29" stroke="#F3ECDD" stroke-width="2.2" fill="none"/>
+    <circle cx="32" cy="32" r="25.2" stroke="url(#gold)" stroke-width="1" fill="none"/>
+    <g stroke="#F3ECDD" stroke-width="2.4" stroke-linecap="round" fill="none">
+      <line x1="32" y1="13" x2="32" y2="19"/>
+      <line x1="45" y1="32" x2="51" y2="32"/>
+      <line x1="32" y1="45" x2="32" y2="51"/>
+      <line x1="13" y1="32" x2="19" y2="32"/>
+      <circle cx="32" cy="32" r="12"/>
+    </g>
+    <circle cx="32" cy="32" r="5" fill="url(#gold)"/>
+    <circle cx="30" cy="30" r="1.4" fill="#FBF8F1" fill-opacity="0.92"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="356" y="168" font-family="Georgia,'Times New Roman',serif" font-size="82" font-weight="700" letter-spacing="0.5" fill="#F3ECDD">Hawkeye</text>
+  <rect x="358" y="186" width="74" height="3" fill="url(#gold)"/>
+  <text x="360" y="216" font-family="'Helvetica Neue',Arial,system-ui,sans-serif" font-size="16" font-weight="600" letter-spacing="6" fill="#E7C977">EVERY INSTALL, CALLED</text>
+  <text x="361" y="250" font-family="Georgia,'Times New Roman',serif" font-size="19" font-style="italic" fill="#A9B7AC">The high-precision line-judge for your software supply chain.</text>
+
+  <!-- verdict signal system -->
+  <g font-family="'Helvetica Neue',Arial,system-ui,sans-serif" font-size="14" font-weight="700" letter-spacing="1">
+    <g transform="translate(1018,94)"><rect width="188" height="38" rx="19" fill="#14422F" stroke="#39C07A" stroke-opacity="0.6"/><circle cx="24" cy="19" r="5" fill="#39C07A"/><text x="40" y="24" fill="#EFF3EC">SAFE</text></g>
+    <g transform="translate(1018,140)"><rect width="188" height="38" rx="19" fill="#14422F" stroke="#E0AE45" stroke-opacity="0.6"/><circle cx="24" cy="19" r="5" fill="#E0AE45"/><text x="40" y="24" fill="#EFF3EC">UNKNOWN</text></g>
+    <g transform="translate(1018,186)"><rect width="188" height="38" rx="19" fill="#14422F" stroke="#E06A6A" stroke-opacity="0.6"/><circle cx="24" cy="19" r="5" fill="#E06A6A"/><text x="40" y="24" fill="#EFF3EC">BLOCKED</text></g>
+  </g>
+
+  <rect x="0" y="317" width="1280" height="3" fill="url(#gold)"/>
+</svg>

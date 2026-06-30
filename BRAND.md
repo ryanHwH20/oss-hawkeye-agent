@@ -36,11 +36,13 @@ It reads as an official seal and a watchful eye at once.
 
 | File | Use |
 |---|---|
-| [`assets/logo-mark.svg`](assets/logo-mark.svg) | Medallion mark, transparent — for **light** backgrounds; favicon source. |
+| [`assets/logo-mark.svg`](assets/logo-mark.svg) | Medallion mark, transparent — for **light** backgrounds. |
 | [`assets/logo-tile.svg`](assets/logo-tile.svg) | Crest tile (cream + gold medallion on forest green). Avatars, GitHub org icon, dark backgrounds. |
 | [`assets/logo-horizontal-dark.svg`](assets/logo-horizontal-dark.svg) | Horizontal lockup for **dark** backgrounds. |
 | [`assets/logo-horizontal-light.svg`](assets/logo-horizontal-light.svg) | Horizontal lockup for **light** backgrounds. |
-| [`assets/banner.svg`](assets/banner.svg) | README / docs hero (1280×320). |
+| [`assets/banner.svg`](assets/banner.svg) | README / docs hero (1280×320), light. |
+| [`assets/banner-dark.svg`](assets/banner-dark.svg) | README / docs hero, dark. Pair with `banner.svg` via `<picture>` for theme-aware rendering. |
+| [`assets/favicon.svg`](assets/favicon.svg) + [`assets/favicon/`](assets/favicon/) | Favicon — a bolder, high-contrast crest tuned to read at 16&nbsp;px. The folder holds rendered `favicon-16/32/48/180/192/512.png`, `apple-touch-icon.png`, and a multi-size `favicon.ico`. |
 | [`assets/social-preview.svg`](assets/social-preview.svg) · [`.png`](assets/social-preview.png) | GitHub social preview / Open Graph card (1280×640). Upload the PNG in **Settings → Social preview**. |
 
 ### Clearspace & minimum size
@@ -121,9 +123,28 @@ logotype renders with Georgia where present and degrades gracefully.
 </picture>
 ```
 
-**Regenerate the raster social card** (needs `librsvg`)
+**Theme-aware README banner** (GitHub light/dark)
+```html
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
+  <img src="assets/banner.svg" alt="Hawkeye" width="100%">
+</picture>
+```
+
+**Favicons in an HTML `<head>`**
+```html
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/favicon/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png">
+```
+
+**Regenerate the raster assets** (needs `librsvg`)
 ```bash
 rsvg-convert assets/social-preview.svg -o assets/social-preview.png
+for s in 16 32 48 180 192 512; do
+  rsvg-convert assets/favicon.svg -w $s -h $s -o assets/favicon/favicon-$s.png
+done
 ```
 
 ---
