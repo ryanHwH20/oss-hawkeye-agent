@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-01
+
 ### Added
 - **Brand identity — "Centre Court".** A full visual system in a heritage,
   grass-court tennis register: a medallion-seal-plus-reticle-eye logo (*"every
@@ -258,7 +260,8 @@ performance, integrity, and measurement work. 151-test suite.
 - Policy-as-Code via `.audit-agent.yaml`.
 - In-memory caching layer with TTL for API responses.
 
-[Unreleased]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.1...v1.0.2
