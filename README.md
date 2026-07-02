@@ -153,6 +153,23 @@ Exit codes are deterministic, so a CI gate is a one-liner:
 hawkeye check-command "npm install express@4.16.0"   # exit 0 pass / 1 blocked / 2 error
 ```
 
+The result leads with a decision-first **Install Plan** — a one-page table plus a single copy-paste **safe install command** that pins every fixable package to a verified-clean version. Packages no version swap can rescue are listed separately, so the command never silently ships something unsafe:
+
+```markdown
+## Install Plan
+
+| Package | Requested | Result | Fix | Reason |
+| :-- | :-- | :-- | :-- | :-- |
+| `axios` | `1.7.2` | ❌ Blocked | → `1.16.0` | Known Vulnerability ≥ MEDIUM |
+| `lodash` | `4.17.21` | ❌ Blocked | → `4.18.0` | Known Vulnerability ≥ MEDIUM |
+
+## ✅ Safe install command
+
+​```bash
+npm install axios@1.16.0 lodash@4.18.0
+​```
+```
+
 Wire the shipped [Claude Code hook](hooks/claude-code-precheck.mjs) into `~/.claude/settings.json` and the agent literally can't run a blocked `npm install` — a true gate, not a prompt nudge. See **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)** (also covers a tool-agnostic shell shim).
 
 ### Whole-Project Scan
