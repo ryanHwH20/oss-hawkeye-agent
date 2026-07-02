@@ -1,6 +1,7 @@
 import type { CheckResult, OsvVuln, ScorecardOfficialSeverity } from './types.js';
 import type { ScanReport } from './scan/scan.js';
 import type { CommandAudit } from './command.js';
+import type { Finding } from './util/baseline.js';
 import { loadPolicy } from './policy.js';
 
 const policy = loadPolicy();
@@ -892,5 +893,68 @@ export function formatScanComment(report: ScanReport): string {
 
   lines.push('---',
     '<sub>🎾 Hawkeye fails closed: an unverifiable dependency is never reported as safe. · [Hawkeye Agent](https://github.com/ryanHwH20/oss-hawkeye-agent)</sub>');
+  return lines.join('\n');
+}
+
+// ─── Baseline Scan (delta report — only what changed) ─────────────────────────
+
+/** Group findings by package for a compact, per-package listing. */
+function findingsByPackage(findings: Finding[]): Array<{ package: string; system: string; reasons: string[] }> {
+  const map = new Map<string, { package: string; system: string; reasons: string[] }>();
+  for (const f of findings) {
+    const entry = map.get(f.package) ?? { package: f.package, system: f.system, reasons: [] };
+    entry.reasons.push(f.summary);
+    map.set(f.package, entry);
+  }
+  return [...map.values()];
+}
+
+/**
+ * Delta report for a baselined scan: leads with what is **new since the
+ * baseline** (the only thing that fails CI), and collapses already-known risks
+ * into a count so the signal stays on the change under review.
+ */
+export function formatBaselineScan(
+  path: string,
+  newFindings: Finding[],
+  knownFindings: Finding[]
+): string {
+  const hasNewBlock = newFindings.some(f => f.category !== 'UNVERIFIED');
+  const hasNewUnknown = newFindings.some(f => f.category === 'UNVERIFIED');
+  const badge = hasNewBlock ? '❌  NEW RISK' : hasNewUnknown ? '⚠️  NEW UNVERIFIED' : '✅  NO NEW RISK';
+
+  const lines: string[] = [
+    `# 🎾 Baseline Scan — ${badge}`,
+    '',
+    `**Path:** \`${path}\` · 🆕 ${newFindings.length} new · 📌 ${knownFindings.length} known (baselined)`,
+    '',
+  ];
+
+  if (newFindings.length === 0) {
+    lines.push(
+      knownFindings.length > 0
+        ? `> ✅ No new risks introduced. ${knownFindings.length} pre-existing risk(s) remain baselined — tracked, not re-alerted.`
+        : '> ✅ No risks found, and none baselined. Clean scan.',
+      '');
+  } else {
+    lines.push('## 🆕 New since baseline — action required', '',
+      '> These risks are **not** in the baseline. They are what this change introduced.', '',
+      '| Package | Ecosystem | Reason |', '| :-- | :-- | :-- |');
+    for (const g of findingsByPackage(newFindings)) {
+      lines.push(`| \`${g.package}\` | ${g.system} | ${cell(g.reasons.join('; '))} |`);
+    }
+    lines.push('',
+      '> To accept these as the new known state, re-generate the baseline: `hawkeye baseline .`', '');
+  }
+
+  if (knownFindings.length > 0) {
+    lines.push(`<details><summary><strong>📌 Known risks in baseline (${knownFindings.length})</strong></summary>`, '',
+      '| Package | Ecosystem | Reason |', '| :-- | :-- | :-- |');
+    for (const g of findingsByPackage(knownFindings)) {
+      lines.push(`| \`${g.package}\` | ${g.system} | ${cell(g.reasons.join('; '))} |`);
+    }
+    lines.push('', '</details>', '');
+  }
+
   return lines.join('\n');
 }

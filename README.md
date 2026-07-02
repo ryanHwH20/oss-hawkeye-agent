@@ -184,6 +184,19 @@ node dist/cli.js scan . --sarif > hawkeye.sarif
 
 `scan` auto-detects `package.json` (NPM) and `requirements.txt` (PyPI), audits each dependency, and returns an aggregated verdict with the same fail-closed exit codes (`0` / `1` / `2`). `--json` and `--sarif` work here too. When a `package-lock.json` (or `npm-shrinkwrap.json`) is present it is preferred, so Hawkeye audits the **resolved** versions npm will actually install — not the declared range.
 
+### Baseline: fail CI only on *new* risk
+
+A brand-new gate on an existing codebase lights up every pre-existing issue at once — noise that trains teams to ignore it. A **baseline** snapshots today's known risks so CI only fails on what a change *introduces*:
+
+```bash
+node dist/cli.js baseline .        # snapshot current risks → hawkeye-baseline.json (commit it)
+node dist/cli.js scan . --baseline # in CI: pass unless a NEW risk appears
+```
+
+The scan then reports a **delta** — new risks up front (the only thing that fails the build), pre-existing ones collapsed into a "known" count and never re-alerted. Bump a baselined package to a new vulnerable version, or add a new risky dependency, and it surfaces as new. When you've triaged and accepted the current state, re-run `baseline .` to move the line.
+
+> A baseline is **not** an approval. Every risk stays real and reported — the baseline only silences *re-alerting* on known ones. To actually approve a package (treat it as SAFE, with a reason and approver), use a committed [`.hawkeye-exceptions.yaml`](docs/INTEGRATIONS.md) instead.
+
 ### GitHub Action + PR comment bot
 
 Run Hawkeye on every pull request: it scans the project, **uploads SARIF** to
