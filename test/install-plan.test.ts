@@ -163,4 +163,15 @@ describe('formatInstallPlan', () => {
     }));
     expect(out).toContain('a \\| b \\| c');
   });
+
+  it('escapes backslashes before pipes so the escaping is complete', () => {
+    const out = formatInstallPlan(audit({
+      command: 'npm install weird@1.0.0',
+      results: [result('weird', '1.0.0', 'BLOCKED', [vuln('path C:\\x | y')])],
+      verdict: 'BLOCKED', effectiveVerdict: 'BLOCKED',
+      remediation: [{ name: 'weird', system: 'NPM', current: '1.0.0', action: 'find-alternative', recommendedVersion: null, fix: null, reason: 'x' }],
+    }));
+    // Backslash doubled, then the literal pipe escaped — no lone `\|` from input.
+    expect(out).toContain('path C:\\\\x \\| y');
+  });
 });

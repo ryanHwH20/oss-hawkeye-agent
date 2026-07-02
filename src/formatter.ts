@@ -613,9 +613,11 @@ export function formatCommandVerdict(results: CheckResult[]): string {
 /** A single `name@version` to feed into a consolidated install command. */
 interface InstallEntry { name: string; version: string; }
 
-/** Escape a cell value so long free-text reasons can't break the table. */
+/** Escape a cell value so long free-text reasons can't break the table.
+ * Backslashes are escaped first so an existing `\` can't combine with the pipe
+ * escape we add (incomplete-sanitization otherwise). */
 function cell(s: string): string {
-  return s.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
+  return s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
 }
 
 /**
