@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { checkPackage } from './checker.js';
 import { scanProject } from './scan/scan.js';
 import { auditCommand } from './command.js';
-import { formatResult, formatScanReport, formatScanComment } from './formatter.js';
+import { formatResult, formatScanReport, formatScanComment, formatInstallPlan } from './formatter.js';
 import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
 import { recordAudit } from './util/audit-log.js';
@@ -165,44 +165,9 @@ async function runCheckCommand(command: string | undefined, out: OutputMode): Pr
       : audit.effectiveVerdict === 'UNKNOWN' ? paint.warn
         : audit.overrides.length > 0 ? paint.warn : paint.safe;
     console.log(`\n# 🎾 Install Check — ${colorEnabled() ? tint(badge) : badge}\n`);
-    console.log(`\`${audit.command}\` → ${audit.system}\n`);
-    for (const r of audit.results) {
-      const b = r.verdict === 'BLOCKED' ? '❌' : r.verdict === 'UNKNOWN' ? '⚠️' : '✅';
-      const reason = r.verdict === 'BLOCKED'
-        ? (r.violations.find(v => v.severity !== 'LOW')?.reason ?? 'Policy violation')
-        : r.verdict === 'UNKNOWN' ? `unverified: ${r.unverified.join(', ')}` : '';
-      console.log(`${b} \`${r.name}@${r.version}\`${reason ? ' — ' + reason : ''}`);
-    }
-    console.log('');
-
-    // Actionable next step(s) — written so an AI agent can self-correct (e.g.
-    // re-install the patched version) instead of just stopping at a block.
-    if (audit.remediation.length > 0) {
-      console.log('## 🔧 How to proceed\n');
-      for (const fix of audit.remediation) {
-        if (fix.action === 'upgrade' && fix.fix) {
-          console.log(`- ✅ Install \`${fix.fix}\` instead — ${fix.reason}`);
-        } else if (fix.action === 'find-alternative') {
-          console.log(`- 🔁 ${fix.reason}`);
-        } else {
-          console.log(`- ⏸️ ${fix.reason}`);
-        }
-      }
-      if (policy.exceptionFormUrl) {
-        console.log(`\n> Need this exact package anyway? Request a documented exception: ${policy.exceptionFormUrl}`);
-      }
-      console.log('');
-    }
-
-    // Documented exceptions that let an otherwise-blocked install proceed.
-    if (audit.overrides.length > 0) {
-      console.log('## ⚠️ Allowed via documented exception\n');
-      for (const o of audit.overrides) {
-        const who = o.approvedBy ? ` (approved by ${o.approvedBy})` : '';
-        console.log(`- \`${o.name}@${o.version}\` was ${o.originalVerdict}${who} — risk accepted: ${o.reason}`);
-      }
-      console.log('');
-    }
+    // Decision-first, action-first body: a scannable Install Plan table, one
+    // copy-paste safe install command, and an honest manual-attention list.
+    console.log(formatInstallPlan(audit));
   }
 
   recordAudit({

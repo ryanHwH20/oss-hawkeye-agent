@@ -1,5 +1,6 @@
 import type { CheckResult, OsvVuln, ScorecardOfficialSeverity } from './types.js';
 import type { ScanReport } from './scan/scan.js';
+import type { CommandAudit } from './command.js';
 import { loadPolicy } from './policy.js';
 
 const policy = loadPolicy();
@@ -605,6 +606,176 @@ export function formatCommandVerdict(results: CheckResult[]): string {
     '',
     overall,
   ].join('\n');
+}
+
+// ─── Install Plan (concise, action-first install-gate output) ─────────────────
+
+/** A single `name@version` to feed into a consolidated install command. */
+interface InstallEntry { name: string; version: string; }
+
+/** Escape a cell value so long free-text reasons can't break the table.
+ * Backslashes are escaped first so an existing `\` can't combine with the pipe
+ * escape we add (incomplete-sanitization otherwise). */
+function cell(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
+}
+
+/**
+ * Render one package spec for a system's install command, e.g. `axios@1.16.0`
+ * (npm) or `requests==2.32.0` (pip). Versionless entries fall back to the bare
+ * name so the manager resolves the latest.
+ */
+function pkgToken(system: string, e: InstallEntry): string {
+  const v = e.version;
+  switch (system) {
+    case 'PYPI':   return v ? `${e.name}==${v}` : e.name;
+    case 'GO':     return v ? `${e.name}@v${v.replace(/^v/, '')}` : e.name;
+    default:       return v ? `${e.name}@${v}` : e.name; // NPM, CARGO, and fallthrough
+  }
+}
+
+/**
+ * Build a single, copy-paste-ready install command that pins every *installable*
+ * package to a safe version. Ecosystems that don't cleanly combine multiple
+ * versioned packages on one line (gem/dotnet/maven) get one command per line.
+ * Returns '' when there is nothing safe to install.
+ */
+export function buildInstallCommand(system: string, entries: InstallEntry[], tool?: string): string {
+  if (entries.length === 0) return '';
+  switch (system) {
+    case 'RUBYGEMS':
+      return entries.map(e => e.version ? `gem install ${e.name} -v ${e.version}` : `gem install ${e.name}`).join('\n');
+    case 'NUGET':
+      return entries.map(e => e.version ? `dotnet add package ${e.name} --version ${e.version}` : `dotnet add package ${e.name}`).join('\n');
+    case 'MAVEN':
+      return entries.map(e => `mvn dependency:get -Dartifact=${e.name}${e.version ? ':' + e.version : ''}`).join('\n');
+    case 'PYPI':
+      return `pip install ${entries.map(e => pkgToken(system, e)).join(' ')}`;
+    case 'CARGO':
+      return `cargo add ${entries.map(e => pkgToken(system, e)).join(' ')}`;
+    case 'GO':
+      return `go get ${entries.map(e => pkgToken(system, e)).join(' ')}`;
+    case 'NPM': {
+      // Preserve the manager the developer actually invoked so the fix matches
+      // their workflow (yarn/pnpm/bun use `add`, npm uses `install`).
+      const t = (tool ?? 'npm').toLowerCase();
+      const verb = t === 'yarn' ? 'yarn add' : t === 'pnpm' ? 'pnpm add' : t === 'bun' ? 'bun add' : 'npm install';
+      return `${verb} ${entries.map(e => pkgToken(system, e)).join(' ')}`;
+    }
+    default:
+      return `${entries.map(e => pkgToken(system, e)).join(' ')}`;
+  }
+}
+
+/** Short, table-friendly reason a package did not simply pass. */
+function planReason(r: CheckResult): string {
+  const v = r.violations.find(x => x.severity !== 'LOW') ?? r.violations[0];
+  if (v) return v.reason;
+  if (r.verdict === 'UNKNOWN') return `unverified: ${r.unverified.join(', ')}`;
+  const advisory = r.violations.find(x => x.severity === 'LOW');
+  return advisory ? advisory.reason : '';
+}
+
+/**
+ * One-page, decision-first install report: a scannable Install Plan table, a
+ * single copy-paste "safe install command" that pins every fixable package to a
+ * verified-clean version, and an honest manual-attention list for the packages
+ * no version swap can rescue. This is the developer-facing body of
+ * `hawkeye check-command` — the verbose per-source audit lives in `formatResult`.
+ */
+export function formatInstallPlan(audit: CommandAudit): string {
+  const system = audit.system ?? '';
+  const tool = audit.command.trim().split(/\s+/)[0];
+  const overrideByPkg = new Map(audit.overrides.map(o => [`${o.name}@${o.version}`, o]));
+  const remByPkg = new Map(audit.remediation.map(rem => [`${rem.name}@${rem.current}`, rem]));
+
+  const lines: string[] = [`\`${audit.command}\` → ${system}`, ''];
+
+  // ── Build the plan rows and, in the same pass, the install/manual buckets ──
+  const installable: InstallEntry[] = [];
+  const manual: Array<{ label: string; reason: string }> = [];
+  let replacedCount = 0;
+
+  const rows: string[] = [];
+  for (const r of audit.results) {
+    const key = `${r.name}@${r.version}`;
+    const requested = r.version || 'latest';
+    const ov = overrideByPkg.get(key);
+    const rem = remByPkg.get(key);
+
+    let result: string;
+    let fix: string;
+
+    if (r.verdict === 'SAFE') {
+      const advisory = r.violations.some(v => v.severity === 'LOW');
+      result = advisory ? '⚠️ Advisory' : '✅ Pass';
+      fix = '✅ install';
+      installable.push({ name: r.name, version: r.version });
+    } else if (ov) {
+      result = `⚠️ ${ov.originalVerdict} (exception)`;
+      fix = '⚠️ exception';
+      installable.push({ name: r.name, version: r.version });
+    } else if (rem && rem.action === 'upgrade' && rem.recommendedVersion) {
+      result = '❌ Blocked';
+      fix = `→ \`${rem.recommendedVersion}\``;
+      installable.push({ name: r.name, version: rem.recommendedVersion });
+      replacedCount++;
+    } else if (r.verdict === 'UNKNOWN') {
+      result = '⚠️ Unverified';
+      fix = '⛔ verify';
+      manual.push({ label: `${r.name}@${requested}`, reason: rem?.reason ?? planReason(r) });
+    } else {
+      result = '❌ Blocked';
+      fix = '⛔ manual';
+      manual.push({ label: `${r.name}@${requested}`, reason: rem?.reason ?? planReason(r) });
+    }
+
+    rows.push(`| \`${r.name}\` | \`${requested}\` | ${result} | ${fix} | ${cell(planReason(r))} |`);
+  }
+
+  lines.push('## Install Plan', '',
+    '| Package | Requested | Result | Fix | Reason |',
+    '| :-- | :-- | :-- | :-- | :-- |',
+    ...rows, '');
+
+  // ── The consolidated command (the headline action) ──
+  if (installable.length > 0 && (replacedCount > 0 || manual.length > 0)) {
+    const cmd = buildInstallCommand(system, installable, tool);
+    const lang = system === 'MAVEN' ? 'xml' : 'bash';
+    lines.push('## ✅ Safe install command', '', '```' + lang, cmd, '```', '');
+    if (manual.length > 0) {
+      const total = audit.results.length;
+      lines.push(`> Resolves ${installable.length} of ${total} packages. ${manual.length} need manual attention (see below).`, '');
+    }
+  } else if (manual.length === 0) {
+    // Everything passed as requested — the original command already stands.
+    lines.push('✅ All packages approved — install as requested.', '');
+  } else {
+    lines.push('## ⛔ No safe install command', '',
+      'None of the requested packages can be safely installed as-is. See manual attention below.', '');
+  }
+
+  // ── Packages no version swap can rescue ──
+  if (manual.length > 0) {
+    lines.push('## ⛔ Needs manual attention', '');
+    for (const m of manual) lines.push(`- \`${m.label}\` — ${m.reason}`);
+    lines.push('');
+    if (policy.exceptionFormUrl) {
+      lines.push(`> Need one of these anyway? Request a documented exception: ${policy.exceptionFormUrl}`, '');
+    }
+  }
+
+  // ── Documented exceptions that let an otherwise-blocked install proceed ──
+  if (audit.overrides.length > 0) {
+    lines.push('## ⚠️ Allowed via documented exception', '');
+    for (const o of audit.overrides) {
+      const who = o.approvedBy ? ` (approved by ${o.approvedBy})` : '';
+      lines.push(`- \`${o.name}@${o.version}\` was ${o.originalVerdict}${who} — risk accepted: ${o.reason}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
 }
 
 // ─── Project Scan Report ──────────────────────────────────────────────────────
