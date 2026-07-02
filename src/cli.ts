@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { checkPackage } from './checker.js';
 import { scanProject } from './scan/scan.js';
 import { auditCommand } from './command.js';
-import { formatResult, formatScanReport, formatScanComment, formatInstallPlan } from './formatter.js';
+import { formatResult, formatScanReport, formatScanComment, formatInstallPlan, formatBaselineScan } from './formatter.js';
 import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
 import { recordAudit } from './util/audit-log.js';
@@ -11,17 +11,36 @@ import { parseAuditLog, aggregateAudit, formatAuditReport } from './audit-report
 import { loadExceptions } from './util/exceptions.js';
 import { daemonAudit } from './daemon-client.js';
 import { paint, brandHeader, colorEnabled } from './util/term.js';
-import { readFileSync } from 'node:fs';
+import { buildBaseline, loadBaselineFingerprints, collectFindings, partitionFindings } from './util/baseline.js';
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const DEFAULT_BASELINE_FILE = 'hawkeye-baseline.json';
+
+/**
+ * Read a value flag in either `--name=value` or bare `--name` form. Returns
+ * `undefined` when absent, `''` for the bare form (caller applies a default),
+ * or the explicit value. Bare (space-separated) values are intentionally not
+ * supported so they can't be confused with a positional argument.
+ */
+function flagValue(raw: string[], name: string): string | undefined {
+  const prefix = `--${name}=`;
+  const hit = raw.find(a => a === `--${name}` || a.startsWith(prefix));
+  if (hit === undefined) return undefined;
+  return hit.startsWith(prefix) ? hit.slice(prefix.length) : '';
+}
 
 function usage(): never {
   console.error('Usage: hawkeye <system> <package> [version] [--json|--sarif]');
-  console.error('       hawkeye scan [path] [--json|--sarif|--comment]');
+  console.error('       hawkeye scan [path] [--json|--sarif|--comment] [--baseline[=file]]');
+  console.error('       hawkeye baseline [path] [--out=file]   # write a risk baseline (default hawkeye-baseline.json)');
   console.error('       hawkeye check-command "<install command>" [--json|--sarif]');
   console.error('       hawkeye audit-report [log...] [--json]');
   console.error('       hawkeye daemon   # optional resident speed-up for the install gate');
   console.error('Example: hawkeye NPM express 5.2.1');
   console.error('         hawkeye scan . --sarif > hawkeye.sarif');
   console.error('         hawkeye scan . --comment > comment.md   # sticky PR comment');
+  console.error('         hawkeye baseline .                       # snapshot current risks');
+  console.error('         hawkeye scan . --baseline                # fail only on NEW risks');
   process.exit(2); // usage error — not a policy block
 }
 
@@ -51,7 +70,13 @@ async function main() {
   const out: OutputMode = { json, sarif, comment, machine };
 
   if (positional[0]?.toLowerCase() === 'scan') {
-    return runScan(positional[1], out);
+    const baselineArg = flagValue(raw, 'baseline');
+    const baselinePath = baselineArg === undefined ? undefined : (baselineArg || DEFAULT_BASELINE_FILE);
+    return runScan(positional[1], out, baselinePath);
+  }
+
+  if (positional[0]?.toLowerCase() === 'baseline') {
+    return runBaseline(positional[1], flagValue(raw, 'out') || DEFAULT_BASELINE_FILE);
   }
 
   if (positional[0]?.toLowerCase() === 'check-command') {
@@ -104,7 +129,7 @@ async function main() {
   }
 }
 
-async function runScan(path: string | undefined, out: OutputMode): Promise<void> {
+async function runScan(path: string | undefined, out: OutputMode, baselinePath?: string): Promise<void> {
   const dir = path ?? '.';
   const policy = loadPolicy();
 
@@ -114,6 +139,13 @@ async function runScan(path: string | undefined, out: OutputMode): Promise<void>
   }
 
   const report = await scanProject(dir, policy);
+
+  // Baseline mode: diff against a snapshot and gate only on *new* risks. SARIF
+  // and the sticky PR comment still describe the full scan; the baseline delta
+  // is layered onto the human/JSON views and drives the exit code.
+  if (baselinePath) {
+    return runScanWithBaseline(report, baselinePath, out);
+  }
 
   if (out.sarif) {
     console.log(JSON.stringify(toSarifReport(report.results), null, 2));
@@ -137,6 +169,52 @@ async function runScan(path: string | undefined, out: OutputMode): Promise<void>
     if (!out.machine) console.log('\n' + paint.safe(paint.bold('✅ Scan passed.')));
     process.exit(0);
   }
+}
+
+function runScanWithBaseline(report: Awaited<ReturnType<typeof scanProject>>, baselinePath: string, out: OutputMode): void {
+  const fingerprints = loadBaselineFingerprints(baselinePath);
+  if (fingerprints === null && !out.machine) {
+    console.error(paint.warn(`⚠️  No baseline at ${baselinePath} — treating every finding as new. Create one with: hawkeye baseline .`));
+  }
+  const { newFindings, knownFindings } = partitionFindings(collectFindings(report), fingerprints ?? new Set());
+
+  const hasNewBlock = newFindings.some(f => f.category !== 'UNVERIFIED');
+  const hasNewUnknown = newFindings.some(f => f.category === 'UNVERIFIED');
+
+  if (out.json) {
+    console.log(JSON.stringify({ path: report.path, newFindings, knownFindings }, null, 2));
+  } else {
+    console.log('\n' + formatBaselineScan(report.path, newFindings, knownFindings));
+  }
+
+  // Gate on NEW findings only — known (baselined) risks never fail the scan.
+  if (hasNewBlock) {
+    if (!out.machine) console.error('\n' + paint.block(paint.bold('❌ Scan failed:') + ` ${newFindings.length} new risk(s) since baseline.`));
+    process.exit(1);
+  } else if (hasNewUnknown) {
+    const msg = `⚠️  New unverifiable dependency since baseline. Failing closed.`;
+    console.error(out.machine ? msg : '\n' + paint.warn(msg));
+    process.exit(1);
+  } else {
+    if (!out.machine) console.log('\n' + paint.safe(paint.bold('✅ Scan passed.')) + paint.dim(` No new risks (${knownFindings.length} baselined).`));
+    process.exit(0);
+  }
+}
+
+async function runBaseline(path: string | undefined, outFile: string): Promise<void> {
+  const dir = path ?? '.';
+  const policy = loadPolicy();
+  console.error(brandHeader());
+  console.error(paint.dim(`Baselining ${resolve(dir)} …`));
+
+  const report = await scanProject(dir, policy);
+  const baseline = buildBaseline(report, new Date().toISOString());
+  writeFileSync(outFile, JSON.stringify(baseline, null, 2) + '\n');
+
+  console.error(paint.safe(paint.bold('✅ Baseline written: ')) + `${outFile} (${baseline.findings.length} known risk(s))`);
+  console.error(paint.dim('Commit it, then run `hawkeye scan . --baseline` in CI to fail only on NEW risks.'));
+  // Writing a baseline is a snapshot operation, not a gate — always exit 0.
+  process.exit(0);
 }
 
 async function runCheckCommand(command: string | undefined, out: OutputMode): Promise<void> {
