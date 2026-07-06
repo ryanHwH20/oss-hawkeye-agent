@@ -34,6 +34,37 @@ and passes**, so the agent is never sent to a "fix" that is itself blocked. When
 no clean version exists (e.g. a vulnerable transitive dependency), the action
 degrades to `find-alternative` with an honest reason.
 
+## PR change note
+
+Once the agent has applied the fix and opens a PR that bumps the version, a
+reviewer still needs the *why*. `pr-note` generates a paste-ready Markdown block
+from the same re-verified audit — risk summary, the version change with its
+semver impact, a compatibility caveat, and a testing checklist:
+
+```bash
+hawkeye pr-note "npm install axios@1.7.2 lodash@4.17.21" >> "$PR_BODY"
+```
+
+```markdown
+### Risk summary
+- `axios@1.7.2` — Known Vulnerability at or above MEDIUM severity
+
+### Applied fix
+| Package | From | To | Impact |
+| :-- | :-- | :-- | :-- |
+| `axios` | `1.7.2` | `1.16.0` | Minor bump — backward-compatible under semver. |
+
+### Testing
+- [ ] Run the full test suite
+- [ ] Smoke-test the paths that use `axios`
+```
+
+Major bumps are flagged as breaking with an extra review checkbox; packages with
+no safe upgrade are split into a "Still needs manual attention" list; and
+exception-approved packages are omitted (there's no change to justify). It's a
+document generator, not a gate — it always exits 0 so it composes into a PR-body
+pipeline. `--json` emits the underlying audit.
+
 ## Documented exceptions (the governed escape hatch)
 
 When a block is a known, accepted risk, don't rip the guardrail out — record an

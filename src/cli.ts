@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { checkPackage } from './checker.js';
 import { scanProject } from './scan/scan.js';
 import { auditCommand } from './command.js';
-import { formatResult, formatScanReport, formatScanComment, formatInstallPlan, formatBaselineScan } from './formatter.js';
+import { formatResult, formatScanReport, formatScanComment, formatInstallPlan, formatBaselineScan, formatPrNote } from './formatter.js';
 import { toSarif, toSarifReport } from './sarif.js';
 import { loadPolicy } from './policy.js';
 import { recordAudit } from './util/audit-log.js';
@@ -34,6 +34,7 @@ function usage(): never {
   console.error('       hawkeye scan [path] [--json|--sarif|--comment] [--baseline[=file]]');
   console.error('       hawkeye baseline [path] [--out=file]   # write a risk baseline (default hawkeye-baseline.json)');
   console.error('       hawkeye check-command "<install command>" [--json|--sarif]');
+  console.error('       hawkeye pr-note "<install command>"   # paste-ready PR change note for a blocked/fixed install');
   console.error('       hawkeye audit-report [log...] [--json]');
   console.error('       hawkeye daemon   # optional resident speed-up for the install gate');
   console.error('Example: hawkeye NPM express 5.2.1');
@@ -81,6 +82,10 @@ async function main() {
 
   if (positional[0]?.toLowerCase() === 'check-command') {
     return runCheckCommand(positional[1], out);
+  }
+
+  if (positional[0]?.toLowerCase() === 'pr-note') {
+    return runPrNote(positional[1], out);
   }
 
   if (positional[0]?.toLowerCase() === 'audit-report') {
@@ -277,6 +282,28 @@ async function runCheckCommand(command: string | undefined, out: OutputMode): Pr
     }
     process.exit(0);
   }
+}
+
+async function runPrNote(command: string | undefined, out: OutputMode): Promise<void> {
+  const policy = loadPolicy();
+  const exceptions = loadExceptions();
+  const audit =
+    (await daemonAudit(command ?? '', policy, exceptions)) ??
+    (await auditCommand(command ?? '', policy, exceptions));
+
+  if (!audit.detected) {
+    console.error('No package install detected — nothing to write a note for.');
+    process.exit(2);
+  }
+
+  if (out.json) {
+    console.log(JSON.stringify(audit, null, 2));
+  } else {
+    // A change-note generator, not a gate: always exit 0 so it composes into a
+    // PR-body pipeline regardless of the underlying verdict.
+    console.log(formatPrNote(audit));
+  }
+  process.exit(0);
 }
 
 async function runAuditReport(files: string[], out: OutputMode): Promise<void> {
