@@ -170,7 +170,7 @@ npm install axios@1.16.0 lodash@4.18.0
 ​```
 ```
 
-Wire the shipped [Claude Code hook](hooks/claude-code-precheck.mjs) into `~/.claude/settings.json` and the agent literally can't run a blocked `npm install` — a true gate, not a prompt nudge. See **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)** (also covers a tool-agnostic shell shim).
+Wire the shipped [Claude Code adapter](adapters/claude-code.mjs) into `~/.claude/settings.json` and the agent literally can't run a blocked `npm install` — a true gate, not a prompt nudge. See **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)** (also covers a tool-agnostic shell shim, and the shared `adapters/` architecture other AI tools plug into).
 
 ### Whole-Project Scan
 
