@@ -265,6 +265,28 @@ governed overrides, verified remediation, and one deterministic next action.
 Commands outside the supported install surface return `not_applicable` rather
 than claiming a security `SAFE` verdict. See [Agent Harness Architecture](docs/AGENT-HARNESS.md).
 
+Integrations that need the package-level trust boundary can use the Decision
+Kernel directly:
+
+```ts
+import {
+  collectPackageEvidence,
+  evaluatePackage,
+  loadPolicy,
+} from 'oss-hawkeye-agent';
+
+const evidence = await collectPackageEvidence({
+  system: 'PYPI',
+  name: 'requests',
+  version: '2.32.3',
+});
+const result = evaluatePackage(evidence, loadPolicy());
+```
+
+Collection owns network and cache access. Evaluation is deterministic and
+side-effect free, so the same evidence can be replayed against a changed policy
+without asking upstream providers again.
+
 ### 💬 Conversational UX & The Two-Step Guardrail
 
 Once connected, keep your workspace skill at [.github/skills/hawkeye-agent/SKILL.md](.github/skills/hawkeye-agent/SKILL.md). It teaches the assistant when and how to invoke Hawkeye; the LLM does not become the authority that declares a package safe.
