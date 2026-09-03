@@ -15,10 +15,12 @@
   "files": [
     "dist",
     "adapters",
+    "docs/AGENT-HARNESS.md",
     "policy.json",
     "SKILL.md"
   ],
-  "main": "dist/checker.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "hawkeye": "dist/cli.js"
   },
@@ -27,6 +29,7 @@
     "start": "node dist/cli.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "uat:pr1": "npm run build && node scripts/uat-pr1.mjs",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs",
     "eval:typosquat": "vitest run test/typosquat-eval.test.ts",

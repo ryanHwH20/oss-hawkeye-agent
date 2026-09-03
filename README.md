@@ -243,9 +243,31 @@ node dist/cli.js PYPI requests 2.31.0
 node dist/cli.js GO github.com/gin-gonic/gin
 ```
 
+### Agent-facing API (schema v1)
+
+An integration should not have to reverse-engineer CLI prose to decide what an
+agent may do next. `assessAction()` returns one versioned, machine-actionable
+contract for every agent surface:
+
+```ts
+import { assessAction } from 'oss-hawkeye-agent';
+
+const assessment = await assessAction({
+  kind: 'shell_command',
+  command: 'npm install lodash@4.17.20',
+  cwd: process.cwd(),
+});
+```
+
+Applicable install actions return an `AdmissionDecision` with raw and effective
+verdicts, structured findings and evidence references, policy identity,
+governed overrides, verified remediation, and one deterministic next action.
+Commands outside the supported install surface return `not_applicable` rather
+than claiming a security `SAFE` verdict. See [Agent Harness Architecture](docs/AGENT-HARNESS.md).
+
 ### 💬 Conversational UX & The Two-Step Guardrail
 
-Once connected, keep your workspace skill at [.github/skills/hawkeye-agent/SKILL.md](.github/skills/hawkeye-agent/SKILL.md). This transforms your LLM into **Hawkeye**, an enterprise-grade security expert.
+Once connected, keep your workspace skill at [.github/skills/hawkeye-agent/SKILL.md](.github/skills/hawkeye-agent/SKILL.md). It teaches the assistant when and how to invoke Hawkeye; the LLM does not become the authority that declares a package safe.
 
 ### Demo GIF (Question -> Integrated Report)
 

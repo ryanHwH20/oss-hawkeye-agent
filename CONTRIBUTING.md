@@ -37,12 +37,53 @@ Hawkeye Agent is built with TypeScript and Node.js.
    node dist/cli.js NPM express 5.2.1
    ```
 
+## Testing Across Ecosystems
+
+A passing npm example does not prove Hawkeye's broader product promise. Teams use
+Hawkeye to make consistent dependency decisions across different stacks, so a
+shared parser, policy, remediation, or enforcement change must not work for
+JavaScript while silently changing the result for another ecosystem. In
+particular, losing an explicit version can cause Hawkeye to assess the latest or
+default release instead of the release the user intended to install.
+
+Use this compatibility matrix when adding or reviewing tests:
+
+| Language or runtime | Hawkeye ecosystem | Supported command families |
+| --- | --- | --- |
+| JavaScript / TypeScript | `NPM` | npm, pnpm, Yarn, Bun |
+| Python | `PYPI` | pip, pip3 |
+| Rust | `CARGO` | cargo |
+| Go | `GO` | go |
+| Ruby | `RUBYGEMS` | gem |
+| .NET / C# | `NUGET` | dotnet |
+| Java / Kotlin | `MAVEN` | Maven |
+
+When a change affects shared command parsing, action assessment, remediation
+rendering, source mapping, or enforcement detection, add table-driven tests for
+all seven ecosystems. If behavior is genuinely ecosystem-specific, cover every
+affected command family and explain the narrower scope in the pull request.
+
+Before submitting a pull request, run:
+
+```bash
+npm run build
+npm test
+```
+
+Command assessment supports the full matrix above. Project manifest scanning is
+currently limited to npm and PyPI projects, so do not describe manifest scanning
+as supporting all seven ecosystems until that capability is implemented and
+tested.
+
 ## Pull Request Process
 
 1. Ensure any changes or new features have been discussed in an issue first.
 2. Create a new branch from `main` (`git checkout -b feature/my-awesome-feature`).
-3. Make your changes and ensure `npm run build` succeeds without TypeScript errors.
+3. Make your changes and ensure both `npm run build` and `npm test` succeed.
 4. Update the `README.md` or `SKILL.md` with details of changes to the interface, if applicable.
-5. Push your branch to GitHub and submit a Pull Request.
+5. Add a maintainer UAT guide for user-visible or integration-facing behavior. It
+   must explain the business outcome being accepted, the commands to run, the
+   expected observations, and any live-data results that can legitimately vary.
+6. Push your branch to GitHub and submit a Pull Request.
 
 Once your PR is submitted, it will be reviewed by the maintainers. We may suggest some changes or improvements or alternative approaches.

@@ -4,6 +4,9 @@ import type { ScanReport } from './scan/scan.js';
 import type { CommandAudit } from './command.js';
 import type { Finding } from './util/baseline.js';
 import { loadPolicy } from './policy.js';
+import { buildInstallCommand, type InstallEntry } from './util/install-command.js';
+
+export { buildInstallCommand } from './util/install-command.js';
 
 const policy = loadPolicy();
 
@@ -612,61 +615,11 @@ export function formatCommandVerdict(results: CheckResult[]): string {
 
 // ─── Install Plan (concise, action-first install-gate output) ─────────────────
 
-/** A single `name@version` to feed into a consolidated install command. */
-interface InstallEntry { name: string; version: string; }
-
 /** Escape a cell value so long free-text reasons can't break the table.
  * Backslashes are escaped first so an existing `\` can't combine with the pipe
  * escape we add (incomplete-sanitization otherwise). */
 function cell(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
-}
-
-/**
- * Render one package spec for a system's install command, e.g. `axios@1.16.0`
- * (npm) or `requests==2.32.0` (pip). Versionless entries fall back to the bare
- * name so the manager resolves the latest.
- */
-function pkgToken(system: string, e: InstallEntry): string {
-  const v = e.version;
-  switch (system) {
-    case 'PYPI':   return v ? `${e.name}==${v}` : e.name;
-    case 'GO':     return v ? `${e.name}@v${v.replace(/^v/, '')}` : e.name;
-    default:       return v ? `${e.name}@${v}` : e.name; // NPM, CARGO, and fallthrough
-  }
-}
-
-/**
- * Build a single, copy-paste-ready install command that pins every *installable*
- * package to a safe version. Ecosystems that don't cleanly combine multiple
- * versioned packages on one line (gem/dotnet/maven) get one command per line.
- * Returns '' when there is nothing safe to install.
- */
-export function buildInstallCommand(system: string, entries: InstallEntry[], tool?: string): string {
-  if (entries.length === 0) return '';
-  switch (system) {
-    case 'RUBYGEMS':
-      return entries.map(e => e.version ? `gem install ${e.name} -v ${e.version}` : `gem install ${e.name}`).join('\n');
-    case 'NUGET':
-      return entries.map(e => e.version ? `dotnet add package ${e.name} --version ${e.version}` : `dotnet add package ${e.name}`).join('\n');
-    case 'MAVEN':
-      return entries.map(e => `mvn dependency:get -Dartifact=${e.name}${e.version ? ':' + e.version : ''}`).join('\n');
-    case 'PYPI':
-      return `pip install ${entries.map(e => pkgToken(system, e)).join(' ')}`;
-    case 'CARGO':
-      return `cargo add ${entries.map(e => pkgToken(system, e)).join(' ')}`;
-    case 'GO':
-      return `go get ${entries.map(e => pkgToken(system, e)).join(' ')}`;
-    case 'NPM': {
-      // Preserve the manager the developer actually invoked so the fix matches
-      // their workflow (yarn/pnpm/bun use `add`, npm uses `install`).
-      const t = (tool ?? 'npm').toLowerCase();
-      const verb = t === 'yarn' ? 'yarn add' : t === 'pnpm' ? 'pnpm add' : t === 'bun' ? 'bun add' : 'npm install';
-      return `${verb} ${entries.map(e => pkgToken(system, e)).join(' ')}`;
-    }
-    default:
-      return `${entries.map(e => pkgToken(system, e)).join(' ')}`;
-  }
 }
 
 /** Short, table-friendly reason a package did not simply pass. */

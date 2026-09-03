@@ -43,13 +43,20 @@ describe('buildInstallCommand', () => {
       .toBe('yarn add axios@1.16.0');
     expect(buildInstallCommand('NPM', [{ name: 'axios', version: '1.16.0' }], 'pnpm'))
       .toBe('pnpm add axios@1.16.0');
+    expect(buildInstallCommand('NPM', [{ name: 'axios', version: '1.16.0' }], 'bun'))
+      .toBe('bun add axios@1.16.0');
   });
 
-  it('uses ecosystem-correct version syntax', () => {
-    expect(buildInstallCommand('PYPI', [{ name: 'requests', version: '2.32.0' }]))
-      .toBe('pip install requests==2.32.0');
-    expect(buildInstallCommand('GO', [{ name: 'example.com/mod', version: '1.2.3' }]))
-      .toBe('go get example.com/mod@v1.2.3');
+  it.each([
+    ['NPM', 'axios', '1.16.0', 'npm install axios@1.16.0'],
+    ['PYPI', 'requests', '2.32.3', 'pip install requests==2.32.3'],
+    ['CARGO', 'serde', '1.0.204', 'cargo add serde@1.0.204'],
+    ['GO', 'example.com/mod', 'v1.10.0', 'go get example.com/mod@v1.10.0'],
+    ['RUBYGEMS', 'rails', '7.1.3', 'gem install rails -v 7.1.3'],
+    ['NUGET', 'Newtonsoft.Json', '13.0.3', 'dotnet add package Newtonsoft.Json --version 13.0.3'],
+    ['MAVEN', 'org.example:demo', '3.5.8', 'mvn dependency:get -Dartifact=org.example:demo:3.5.8'],
+  ])('uses %s-correct version syntax', (system, name, version, expected) => {
+    expect(buildInstallCommand(system, [{ name, version }])).toBe(expected);
   });
 
   it('emits one line per package for managers that cannot combine versions', () => {

@@ -28,7 +28,7 @@ import { formatInstallPlan } from '../../dist/formatter.js';
 // non-install Bash commands (ls, git status, cat, ...) a coding agent runs
 // in a session, none of which need auditing at all.
 export const INSTALL_RE =
-  /\b(?:npm|pnpm|yarn|bun)\s+(?:install|i|add)\b|\bpip3?\s+install\b|\bcargo\s+add\b|\bgo\s+get\b|\bgem\s+install\b|\bdotnet\b[\s\S]*\bpackage\b|\bmvn\b[\s\S]*-Dartifact=/i;
+  /\b(?:npm|pnpm|yarn|bun)\s+(?:install|i|add)\b|\bpip3?\s+install\b|\bcargo\s+add\b|\bgo\s+get\b|\bgem\s+install\b|\bdotnet\s+add\b[\s\S]*\bpackage\b|\bmvn\b[\s\S]*-Dartifact=/i;
 
 /**
  * Audit a shell command for a package install. Returns `null` when the

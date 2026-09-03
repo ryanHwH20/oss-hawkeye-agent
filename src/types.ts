@@ -14,7 +14,7 @@ export interface Policy {
   /** Block packages whose name looks like a typosquat of a popular one. Default: true. */
   blockTyposquats?: boolean;
   exceptionFormUrl: string;
-  ai?: { type: string; model?: string };
+  ai?: { type: string; model?: string } | null;
 }
 
 export interface OsvVuln {

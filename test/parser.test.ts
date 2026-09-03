@@ -29,12 +29,24 @@ describe('detectAndParse (issue #10)', () => {
     expect(r?.result.packages).toEqual([{ name: 'github.com/gin-gonic/gin', version: 'v1.9.0' }]);
   });
 
-  it('parses cargo add and dotnet add package', () => {
-    expect(parse('cargo add serde')?.result).toEqual({ system: 'CARGO', packages: [{ name: 'serde', version: '' }] });
-    expect(parse('dotnet add package Newtonsoft.Json')?.result).toEqual({
-      system: 'NUGET',
-      packages: [{ name: 'Newtonsoft.Json', version: '' }],
-    });
+  it.each([
+    ['npm', 'npm install lodash@4.17.21', 'NPM', 'lodash', '4.17.21'],
+    ['pnpm', 'pnpm add zod@3.23.8', 'NPM', 'zod', '3.23.8'],
+    ['yarn', 'yarn add react@18.3.1', 'NPM', 'react', '18.3.1'],
+    ['bun', 'bun add hono@4.5.0', 'NPM', 'hono', '4.5.0'],
+    ['PyPI', 'pip install requests==2.32.3', 'PYPI', 'requests', '2.32.3'],
+    ['Cargo', 'cargo add serde@1.0.204', 'CARGO', 'serde', '1.0.204'],
+    ['Go', 'go get github.com/gin-gonic/gin@v1.10.0', 'GO', 'github.com/gin-gonic/gin', 'v1.10.0'],
+    ['RubyGems', 'gem install rails -v 7.1.3', 'RUBYGEMS', 'rails', '7.1.3'],
+    ['NuGet', 'dotnet add package Newtonsoft.Json --version 13.0.3', 'NUGET', 'Newtonsoft.Json', '13.0.3'],
+    ['Maven', 'mvn dependency:get -Dartifact=org.springframework.boot:spring-boot:3.5.8', 'MAVEN', 'org.springframework.boot:spring-boot', '3.5.8'],
+  ])('parses an explicit %s package version', (_label, command, system, name, version) => {
+    expect(parse(command)?.result).toEqual({ system, packages: [{ name, version }] });
+  });
+
+  it('supports the alternate version flags for RubyGems and NuGet', () => {
+    expect(parse('gem install rails --version=7.1.3')?.result.packages[0].version).toBe('7.1.3');
+    expect(parse('dotnet add package Newtonsoft.Json -v 13.0.3')?.result.packages[0].version).toBe('13.0.3');
   });
 
   it('parses mvn -Dartifact into group:artifact + version', () => {
@@ -55,5 +67,6 @@ describe('detectAndParse (issue #10)', () => {
     expect(parse('pip freeze')).toBeNull();
     expect(parse('go build ./...')).toBeNull();
     expect(parse('cargo build')).toBeNull();
+    expect(parse('dotnet remove package Newtonsoft.Json')).toBeNull();
   });
 });
