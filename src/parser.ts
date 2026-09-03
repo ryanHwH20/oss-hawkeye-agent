@@ -108,7 +108,7 @@ const ECOSYSTEM_PATTERNS: Array<{
     },
   },
   {
-    // gem install pkg
+    // gem install pkg -v 1.2.3
     regex: /^gem$/i,
     system: 'RUBYGEMS',
     extractor: (tokens, idx) => {
@@ -118,7 +118,16 @@ const ECOSYSTEM_PATTERNS: Array<{
       const pkgs: Array<{ name: string; version: string }> = [];
       for (let i = start; i < tokens.length; i++) {
         const t = tokens[i];
-        if (t === '-v' || t === '--version') { i++; if (i < tokens.length) { /* version for previous */ } continue; }
+        if (t === '-v' || t === '--version') {
+          const version = tokens[i + 1];
+          if (version && pkgs.length > 0) pkgs[pkgs.length - 1].version = version;
+          i++;
+          continue;
+        }
+        if (t.startsWith('--version=') && pkgs.length > 0) {
+          pkgs[pkgs.length - 1].version = t.slice('--version='.length);
+          continue;
+        }
         if (t.startsWith('-')) continue;
         pkgs.push({ name: t, version: '' });
       }
@@ -126,23 +135,29 @@ const ECOSYSTEM_PATTERNS: Array<{
     },
   },
   {
-    // dotnet add package PkgName
+    // dotnet add package PkgName --version 1.2.3
     regex: /^dotnet$/i,
     system: 'NUGET',
     extractor: (tokens, idx) => {
       let start = idx + 1;
       // dotnet add [project] package PkgName
-      const pkgIdx = tokens.indexOf('package', start);
-      if (pkgIdx === -1) return [];
+      const addIdx = tokens.findIndex((token, tokenIndex) => tokenIndex >= start && token.toLowerCase() === 'add');
+      const pkgIdx = tokens.findIndex((token, tokenIndex) => tokenIndex > addIdx && token.toLowerCase() === 'package');
+      if (addIdx === -1 || pkgIdx === -1) return [];
       start = pkgIdx + 1;
-      const pkgs: Array<{ name: string; version: string }> = [];
-      for (let i = start; i < tokens.length; i++) {
+      const name = tokens[start];
+      if (!name || name.startsWith('-')) return [];
+      let version = '';
+      for (let i = start + 1; i < tokens.length; i++) {
         const t = tokens[i];
-        if (t === '-v' || t === '--version') { i++; continue; }
-        if (t.startsWith('-')) continue;
-        pkgs.push({ name: t, version: '' });
+        if (t === '-v' || t === '--version') {
+          version = tokens[i + 1] ?? '';
+          i++;
+        } else if (t.startsWith('--version=')) {
+          version = t.slice('--version='.length);
+        }
       }
-      return pkgs;
+      return [{ name, version }];
     },
   },
   {

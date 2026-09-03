@@ -129,12 +129,17 @@ describe('INSTALL_RE', () => {
       'npm install lodash', 'npm i express', 'pnpm add axios', 'yarn add left-pad',
       'bun add zod', 'pip install requests', 'pip3 install requests', 'cargo add serde',
       'go get github.com/x/y', 'gem install rails',
+      'dotnet add package Newtonsoft.Json --version 13.0.3',
+      'mvn dependency:get -Dartifact=org.example:demo:1.0.0',
     ];
     for (const cmd of installs) expect(INSTALL_RE.test(cmd)).toBe(true);
   });
 
   it('does not match unrelated or non-install package-manager commands', () => {
-    const nonInstalls = ['ls -la', 'npm ci', 'npm run build', 'git status', 'go build ./...', 'cat package.json'];
+    const nonInstalls = [
+      'ls -la', 'npm ci', 'npm run build', 'git status', 'go build ./...',
+      'dotnet remove package Newtonsoft.Json', 'cat package.json',
+    ];
     for (const cmd of nonInstalls) expect(INSTALL_RE.test(cmd)).toBe(false);
   });
 });
