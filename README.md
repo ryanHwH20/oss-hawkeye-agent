@@ -283,6 +283,23 @@ const evidence = await collectPackageEvidence({
 const result = evaluatePackage(evidence, loadPolicy());
 ```
 
+Long-running agent integrations can preserve and resume the decision workflow:
+
+```ts
+import { createRun, nextAction, submitResult } from 'oss-hawkeye-agent';
+
+const state = createRun(intent, policyRef, { runId: 'run-123' });
+const action = nextAction(state);
+const updated = submitResult(state, action.id, actionResult);
+```
+
+The versioned state records bounded attempts and action history without storing
+conversation or hidden model state. Only the expected action result can advance
+the workflow; approval requests never let an agent approve itself. The Harness
+does not execute commands—normal Hawkeye enforcement remains authoritative.
+See [Agent Harness Architecture](docs/AGENT-HARNESS.md) and the
+[PR3 maintainer UAT](docs/UAT-PR3.md).
+
 Collection owns network and cache access. Evaluation is deterministic and
 side-effect free, so the same evidence can be replayed against a changed policy
 without asking upstream providers again.

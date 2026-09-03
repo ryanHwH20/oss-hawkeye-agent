@@ -9,7 +9,7 @@ export type ActionKind =
   | 'EXPLAIN'
   | 'STOP';
 
-/** The one-shot next action. Stateful semantics arrive in Harness V1. */
+/** A one-shot plan that can also be advanced through the stateful Harness V1. */
 export interface ActionPlan {
   id: string;
   kind: ActionKind;

@@ -118,8 +118,51 @@ The one-shot runtime currently maps a decision to one action:
 | No verified fix, approval workflow configured | `REQUEST_HUMAN_APPROVAL` |
 | No safe recovery | `STOP` |
 
-This is intentionally small. Stateful attempts, action-result validation, and
-replayable transitions belong to Harness V1 rather than this compatibility PR.
+This one-shot plan is also the input to Harness V1. The Harness preserves it
+instead of rebuilding policy or remediation logic.
+
+## Harness V1: resumable workflow
+
+One assessment is enough for a synchronous hook, but not for an agent that may
+retry, pause for approval, or resume in another process. Harness V1 exposes a
+versioned state machine for that operating lifecycle:
+
+```ts
+import { createRun, nextAction, submitResult } from 'oss-hawkeye-agent';
+
+const state = createRun(intent, policyRef, { runId: 'run-123' });
+const action = nextAction(state);
+const updated = submitResult(state, action.id, result);
+```
+
+`HawkeyeRunState` contains the original intent and policy identity, canonical
+decisions, attempt budget, action history, approval requests, and current phase.
+It is JSON serializable and contains no conversation or hidden model state.
+After a JSON round-trip, the same state produces the same action and ID.
+
+`nextAction()` is a pure planner. `submitResult()` is an immutable reducer that
+accepts only the exact pending action and matching result schema. Stale,
+duplicate, out-of-order, malformed, wrong-command, intent-mismatched, and
+policy-mismatched submissions fail with a structured `HarnessError`.
+
+Retryable `UNKNOWN` decisions use a finite assessment budget (three by default).
+Exhaustion produces `STOP`, preventing a provider outage from becoming an
+unbounded agent loop.
+
+### Approval is not agent authority
+
+An `APPROVAL_REQUESTED` result records only that a governed request was handed
+off. It does not change `BLOCKED` to `SAFE`, and arbitrary `approved: true`
+fields are rejected by runtime result validation. A trusted exception must be
+recorded outside the Harness and the original action reassessed.
+
+### Execution reports are not enforcement receipts
+
+An `EXECUTION_COMPLETED` result records workflow progress. It is not a
+cryptographic attestation and does not grant permission. The package-manager
+command in an allowed or verified-remediation plan still passes through normal
+Hawkeye enforcement. Harness V1 standardizes orchestration while enforcement
+remains the final security authority.
 
 ## Not applicable is not safe
 
