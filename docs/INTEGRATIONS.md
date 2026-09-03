@@ -105,12 +105,24 @@ Set `HAWKEYE_AUDIT_LOG=/path/to/audit.jsonl` to append one JSON record per
 `decision` is `allow` | `block` | `override`. Point it at a central path to
 measure block rate, override rate, and fix conversion across the org.
 
-## Claude Code (PreToolUse hook) — recommended
+## AI-agent adapters (`adapters/`)
+
+Every supported AI coding tool has one file under [`adapters/`](../adapters):
+a thin translation layer over the shared audit core in
+[`adapters/lib/gate.mjs`](../adapters/lib/gate.mjs). The core decides
+SAFE/BLOCKED/UNKNOWN once; each adapter only translates its host tool's wire
+format to/from that decision, so every tool sees the identical verdict and
+message. Adapters import the audit logic directly from this package's own
+`dist/` — no subprocess, no `HAWKEYE_BIN` — so an adapter and the audit logic
+it calls can never drift out of version sync.
+
+### Claude Code (PreToolUse hook) — recommended
 
 A [PreToolUse hook](https://docs.claude.com/en/docs/claude-code/hooks) runs
-before every Bash command. The shipped hook ([`hooks/claude-code-precheck.mjs`](../hooks/claude-code-precheck.mjs))
-inspects the command, audits any install, and **blocks** it on a BLOCKED /
-UNVERIFIED verdict — a true gate, not a prompt suggestion.
+before every Bash command. The shipped adapter
+([`adapters/claude-code.mjs`](../adapters/claude-code.mjs)) inspects the
+command, audits any install, and **blocks** it on a BLOCKED / UNKNOWN verdict
+— a true gate, not a prompt suggestion.
 
 Add to `~/.claude/settings.json` (global — applies to every project):
 
@@ -121,7 +133,7 @@ Add to `~/.claude/settings.json` (global — applies to every project):
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "node /absolute/path/to/oss-hawkeye-agent/hooks/claude-code-precheck.mjs" }
+          { "type": "command", "command": "node /absolute/path/to/oss-hawkeye-agent/adapters/claude-code.mjs" }
         ]
       }
     ]
@@ -129,22 +141,10 @@ Add to `~/.claude/settings.json` (global — applies to every project):
 }
 ```
 
-The hook calls the `hawkeye` CLI on your `PATH`. To point it at a local build
-instead, set `HAWKEYE_BIN` — it may include arguments, so a dev build works:
-
-```json
-{ "type": "command",
-  "command": "node /abs/path/to/oss-hawkeye-agent/hooks/claude-code-precheck.mjs",
-  "env": { "HAWKEYE_BIN": "node /abs/path/to/oss-hawkeye-agent/dist/cli.js" } }
-```
-
-`HAWKEYE_BIN` is split on whitespace, so the executable's own path must not
-contain spaces.
-
-**Fail-closed by design.** If the hook detects an install but Hawkeye can't
-verify it — the CLI isn't installed, `HAWKEYE_BIN` is wrong, or it crashes —
-the install is **blocked** (exit 2), not waved through. A gate that fails open
-is no gate. Non-install commands (`npm ci`, `go build`, …) are always allowed.
+**Fail-closed by design.** If the adapter detects an install but Hawkeye
+can't verify it — a crash while auditing, a bad policy file — the install is
+**blocked** (exit 2), not waved through. A gate that fails open is no gate.
+Non-install commands (`npm ci`, `go build`, …) are always allowed.
 
 ## Any agent / any tool (shell shim)
 
