@@ -66,6 +66,42 @@ interface AdmissionDecision {
 enforced result after a trusted exception. Keeping both is essential: accepted
 risk remains visible risk.
 
+## Decision Kernel
+
+An audit is easier to trust when it can answer two questions separately:
+
+1. What did Hawkeye observe?
+2. What did organization policy decide about those observations?
+
+PR2 makes that boundary explicit:
+
+```text
+collectPackageEvidence()
+    network, cache, provider normalization
+                ↓
+          PackageEvidence
+                ↓
+evaluatePackage(evidence, policy)
+    deterministic, side-effect-free policy evaluation
+                ↓
+           CheckResult
+```
+
+`PackageEvidence` retains source availability, trust, provenance, dependency
+evidence, and the exact package coordinate. It contains no verdict.
+`evaluatePackage()` performs no network, filesystem, cache, clock, or random
+access. This lets a security team replay the same observations against a policy
+change and distinguish a provider outage from a policy violation.
+
+`assessPackage()` composes both steps for new integrations. The established
+`checkPackage()` API remains a compatibility facade over the same path, so CLI,
+scan, daemon, adapter, remediation, and telemetry consumers do not gain a
+second interpretation of package risk.
+
+Collected evidence and `EvidenceRef` have different jobs. The former carries
+the payload needed by the Decision Kernel; the latter is a stable, transport-
+friendly reference embedded in `AdmissionDecision`.
+
 The policy digest is computed from normalized policy meaning, not YAML or JSON
 formatting. Two equivalent policies produce the same identity, while a material
 policy change produces a different digest.

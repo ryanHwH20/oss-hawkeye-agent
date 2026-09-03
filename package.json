@@ -30,6 +30,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "uat:pr1": "npm run build && node scripts/uat-pr1.mjs",
+    "uat:pr2": "npm run build && node scripts/uat-pr2.mjs",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs",
     "eval:typosquat": "vitest run test/typosquat-eval.test.ts",
