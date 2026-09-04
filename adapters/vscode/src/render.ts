@@ -8,7 +8,9 @@ import type {
 } from '../../../src/index.js';
 
 function inline(value: string): string {
-  return `\`${value.replace(/`/g, '\\`')}\``;
+  const longest = Math.max(0, ...[...value.matchAll(/`+/g)].map(match => match[0].length));
+  const fence = '`'.repeat(longest + 1);
+  return `${fence} ${value} ${fence}`;
 }
 
 function block(value: string): string {

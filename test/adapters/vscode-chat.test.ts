@@ -11,6 +11,7 @@ import type {
 } from '../../src/index.js';
 import { createRun, nextAction, submitResult } from '../../src/index.js';
 import { registerHawkeyeParticipant } from '../../adapters/vscode/src/host.js';
+import { renderHelp } from '../../adapters/vscode/src/render.js';
 import { extractInstallCommand, routeRequest } from '../../adapters/vscode/src/router.js';
 import { HawkeyeChatService, MemoryStateStore } from '../../adapters/vscode/src/service.js';
 import type { HawkeyeChatDependencies, HawkeyeStateStore } from '../../adapters/vscode/src/types.js';
@@ -323,6 +324,14 @@ describe('@oss-hawkeye chat service', () => {
     expect(response.status).toBe('help');
     expect(response.markdown).toContain('could not safely infer an ecosystem');
     expect(deps.assessAction).not.toHaveBeenCalled();
+  });
+});
+
+describe('VS Code response rendering', () => {
+  it('contains untrusted inline values with a collision-free Markdown fence', () => {
+    const response = renderHelp('C:\\packages\\`unsafe`');
+
+    expect(response).toContain('`` C:\\packages\\`unsafe` ``');
   });
 });
 
