@@ -192,6 +192,38 @@ history and provider payloads remain outside the state.
 executes a side effect. The VS Code host layer only registers the participant,
 adapts cancellation/storage, and streams an untrusted Markdown string.
 
+## MCP adapter boundary
+
+The local stdio MCP adapter makes the same Runtime and Harness available to
+Codex, Claude Code, and other MCP clients without creating another verdict
+engine:
+
+```text
+MCP client
+    hawkeye_check_action(command)
+        ↓
+Action Runtime → Harness state + canonical next action
+        ↓
+    hawkeye_next_action(state)
+    hawkeye_submit_result(state, actionId, result)
+```
+
+`hawkeye_check_action` performs assessment only. `hawkeye_next_action` validates
+caller-carried JSON state and plans from it. `hawkeye_submit_result` records the
+reported outcome for the exact pending action. The adapter is stateless between
+requests; the explicit `HawkeyeRunState` is the resume token, and a state from a
+different workspace is rejected.
+
+Inputs and outputs use strict schemas, bounded payloads, and both MCP
+`structuredContent` and equivalent JSON text. This lowers adoption cost for a
+new MCP host while keeping decision behavior aligned with the CLI, hooks, and
+VS Code surface.
+
+MCP tools are model-controlled and therefore advisory. A submitted execution
+result is still not an enforcement receipt, and an approval request still does
+not change a verdict. PreToolUse hooks and shell shims remain the authoritative
+side-effect boundary.
+
 ## Not applicable is not safe
 
 `npm test` and `git status` do not represent supported package-install intents.

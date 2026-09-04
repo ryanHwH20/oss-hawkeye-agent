@@ -172,6 +172,19 @@ npm install axios@1.16.0 lodash@4.18.0
 
 Wire the shipped [Claude Code adapter](adapters/claude-code.mjs) into `~/.claude/settings.json` and the agent literally can't run a blocked `npm install` — a true gate, not a prompt nudge. See **[docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)** (also covers a tool-agnostic shell shim, and the shared `adapters/` architecture other AI tools plug into).
 
+For an interactive, vendor-neutral agent tool, build and register the optional
+local MCP adapter (Node.js 20+):
+
+```bash
+npm run build:mcp
+codex mcp add oss-hawkeye -- node "$(pwd)/adapters/mcp/launcher.mjs"
+```
+
+It exposes assessment and resumable next-action tools to Codex, Claude Code,
+and other MCP clients without executing the proposed install. MCP complements
+rather than replaces the enforcing hook or shell shim. See
+**[PR5 MCP UAT](docs/UAT-PR5.md)** for setup and seven-ecosystem verification.
+
 ### Whole-Project Scan
 
 Audit every dependency declared in a project's manifests in one go:

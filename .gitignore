@@ -5,3 +5,5 @@ adapters/vscode/*.vsix
 adapters/vscode/LICENSE
 adapters/vscode/policy.json
 adapters/vscode/icon.png
+adapters/mcp/dist/
+adapters/mcp/policy.json

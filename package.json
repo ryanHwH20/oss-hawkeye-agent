@@ -16,18 +16,23 @@
     "dist",
     "adapters",
     "docs/AGENT-HARNESS.md",
+    "docs/INTEGRATIONS.md",
+    "docs/UAT-PR5.md",
     "policy.json",
     "SKILL.md"
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "hawkeye": "dist/cli.js"
+    "hawkeye": "dist/cli.js",
+    "hawkeye-mcp": "adapters/mcp/launcher.mjs"
   },
   "scripts": {
-    "build": "tsc && npm run typecheck:vscode",
+    "build": "tsc && npm run typecheck:vscode && npm run typecheck:mcp",
     "typecheck:vscode": "tsc --noEmit -p adapters/vscode/tsconfig.json",
+    "typecheck:mcp": "tsc --noEmit -p adapters/mcp/tsconfig.json",
     "build:vscode": "node adapters/vscode/esbuild.mjs --production",
+    "build:mcp": "node adapters/mcp/esbuild.mjs --production",
     "package:vscode": "npm run build && node scripts/package-vscode.mjs",
     "start": "node dist/cli.js",
     "test": "vitest run",
@@ -36,6 +41,8 @@
     "uat:pr2": "npm run build && node scripts/uat-pr2.mjs",
     "uat:pr3": "npm run build && node scripts/uat-pr3.mjs",
     "uat:pr4": "npm run build && npm run build:vscode && node scripts/uat-pr4.mjs",
+    "uat:pr5": "npm run build && npm run build:mcp && node scripts/uat-pr5.mjs",
+    "prepack": "npm run build && npm run build:mcp",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs",
     "eval:typosquat": "vitest run test/typosquat-eval.test.ts",
@@ -60,6 +67,8 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/server": "2.0.0",
     "@types/cvss": "^1.0.3",
     "@types/semver": "^7.7.1",
     "@types/spdx-expression-parse": "^4.0.0",
@@ -67,6 +76,7 @@
     "@vscode/vsce": "3.9.2",
     "esbuild": "0.28.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "zod": "4.5.4"
   }
 }
