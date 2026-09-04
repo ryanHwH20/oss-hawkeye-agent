@@ -11,6 +11,7 @@ import {
   loadPolicyWithMetadata,
   nextAction,
   policyDigest,
+  scanProject,
   submitResult,
 } from '../src/index.js';
 
@@ -28,5 +29,6 @@ describe('public package API', () => {
     expect(nextAction).toBeTypeOf('function');
     expect(submitResult).toBeTypeOf('function');
     expect(HarnessError).toBeTypeOf('function');
+    expect(scanProject).toBeTypeOf('function');
   });
 });

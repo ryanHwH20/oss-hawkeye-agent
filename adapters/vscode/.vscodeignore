@@ -1,0 +1,7 @@
+src/**
+tsconfig.json
+esbuild.mjs
+.npmignore
+**/*.map
+dist/runtime.js
+*.vsix

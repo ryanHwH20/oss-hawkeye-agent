@@ -1,2 +1,7 @@
 node_modules/
 dist/
+adapters/vscode/dist/
+adapters/vscode/*.vsix
+adapters/vscode/LICENSE
+adapters/vscode/policy.json
+adapters/vscode/icon.png

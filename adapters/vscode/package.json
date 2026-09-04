@@ -1,0 +1,85 @@
+{
+  "name": "oss-hawkeye-vscode",
+  "displayName": "OSS Hawkeye",
+  "description": "Deterministic open source dependency admission in VS Code Chat.",
+  "publisher": "ryanhwh20",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryanHwH20/oss-hawkeye-agent.git"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "keywords": [
+    "security",
+    "dependencies",
+    "supply-chain",
+    "chat"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Hawkeye reads workspace policy and dependency manifests before producing security guidance."
+    }
+  },
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "oss-hawkeye.chat",
+        "name": "oss-hawkeye",
+        "fullName": "OSS Hawkeye",
+        "description": "Check dependency risk, policy, remediation, and workspace status.",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "check",
+            "description": "Assess an explicit package-install command"
+          },
+          {
+            "name": "scan",
+            "description": "Scan supported dependency manifests in this workspace"
+          },
+          {
+            "name": "explain",
+            "description": "Explain the latest canonical admission decision"
+          },
+          {
+            "name": "fix",
+            "description": "Show the latest verified remediation plan"
+          },
+          {
+            "name": "policy",
+            "description": "Show the active open source policy"
+          },
+          {
+            "name": "status",
+            "description": "Show the current Harness phase and next action"
+          }
+        ],
+        "disambiguation": [
+          {
+            "category": "dependency_security",
+            "description": "The user wants to assess, explain, remediate, or review policy for an open source dependency.",
+            "examples": [
+              "Can I install npm install axios@1.7.2?",
+              "Why was this dependency blocked?",
+              "What should I do next with this package?"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.mjs --production"
+  }
+}

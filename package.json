@@ -25,13 +25,17 @@
     "hawkeye": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run typecheck:vscode",
+    "typecheck:vscode": "tsc --noEmit -p adapters/vscode/tsconfig.json",
+    "build:vscode": "node adapters/vscode/esbuild.mjs --production",
+    "package:vscode": "npm run build && node scripts/package-vscode.mjs",
     "start": "node dist/cli.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "uat:pr1": "npm run build && node scripts/uat-pr1.mjs",
     "uat:pr2": "npm run build && node scripts/uat-pr2.mjs",
     "uat:pr3": "npm run build && node scripts/uat-pr3.mjs",
+    "uat:pr4": "npm run build && npm run build:vscode && node scripts/uat-pr4.mjs",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs",
     "eval:typosquat": "vitest run test/typosquat-eval.test.ts",
@@ -59,6 +63,9 @@
     "@types/cvss": "^1.0.3",
     "@types/semver": "^7.7.1",
     "@types/spdx-expression-parse": "^4.0.0",
+    "@types/vscode": "1.100.0",
+    "@vscode/vsce": "3.9.2",
+    "esbuild": "0.28.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   }
