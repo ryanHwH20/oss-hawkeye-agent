@@ -12,6 +12,9 @@ export { collectPackageEvidence } from './runtime/collect-package-evidence.js';
 export type { CollectPackageEvidenceOptions } from './runtime/collect-package-evidence.js';
 export { evaluatePackage } from './core/evaluate-package.js';
 export { loadPolicy, loadPolicyWithMetadata } from './policy.js';
+export type { LoadedPolicy } from './policy.js';
+export { scanProject } from './scan/scan.js';
+export type { ScanReport } from './scan/scan.js';
 export { policyDigest } from './core/policy-ref.js';
 export type { ActionPlan, ActionKind } from './core/action.js';
 export type {

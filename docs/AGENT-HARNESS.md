@@ -164,6 +164,34 @@ command in an allowed or verified-remediation plan still passes through normal
 Hawkeye enforcement. Harness V1 standardizes orchestration while enforcement
 remains the final security authority.
 
+## `@oss-hawkeye` adapter boundary
+
+The VS Code extension is the first interactive consumer of the Runtime and
+Harness. The exact participant name is `@oss-hawkeye`; `/check`, `/scan`,
+`/explain`, `/fix`, `/policy`, and `/status` are explicit operations within that
+participant.
+
+```text
+VS Code ChatRequest
+        ↓
+deterministic adapter router
+        ↓
+Action Runtime / Harness / scan runtime
+        ↓
+structured Markdown response
+```
+
+The router recognizes explicit package-manager commands and clear workflow
+phrases without an LLM. A bare package name with no ecosystem produces a
+clarification request rather than an assumed registry. The adapter persists
+only `HawkeyeRunState` in workspace-local extension storage; conversation
+history and provider payloads remain outside the state.
+
+`/fix` renders only a pending `TRY_VERIFIED_REMEDIATION` plan. `/status` calls
+`nextAction()` against the stored state. Neither command grants permission or
+executes a side effect. The VS Code host layer only registers the participant,
+adapts cancellation/storage, and streams an untrusted Markdown string.
+
 ## Not applicable is not safe
 
 `npm test` and `git status` do not represent supported package-install intents.

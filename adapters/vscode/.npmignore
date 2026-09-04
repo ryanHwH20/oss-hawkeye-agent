@@ -1,0 +1,5 @@
+dist/
+*.vsix
+LICENSE
+policy.json
+icon.png

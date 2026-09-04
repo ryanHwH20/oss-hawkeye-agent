@@ -5,7 +5,9 @@ import yaml from 'yaml';
 import type { Policy, BlockingSeverity } from './types.js';
 import { policyRef, type PolicyRef } from './core/policy-ref.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+function defaultPolicyPath(): string {
+  return resolve(dirname(fileURLToPath(import.meta.url)), '..', 'policy.json');
+}
 
 /** Coerce a configured severity into a valid threshold; defaults to MEDIUM. */
 function normalizeSeverity(value: unknown): BlockingSeverity {
@@ -34,7 +36,10 @@ function fromData(data: Record<string, unknown>, fallbackName: string): Policy {
 }
 
 /** Load normalized policy plus a stable identity for audit and agent decisions. */
-export function loadPolicyWithMetadata(cwd: string = process.cwd()): LoadedPolicy {
+export function loadPolicyWithMetadata(
+  cwd: string = process.cwd(),
+  fallbackPolicyPath?: string,
+): LoadedPolicy {
   // 1. Try to load .audit-agent.yaml from current working directory
   const yamlPath = resolve(cwd, '.audit-agent.yaml');
   if (existsSync(yamlPath)) {
@@ -51,7 +56,9 @@ export function loadPolicyWithMetadata(cwd: string = process.cwd()): LoadedPolic
   }
 
   // 2. Fallback to default policy.json
-  const policyPath = resolve(__dirname, '..', 'policy.json');
+  // A bundled adapter supplies its packaged policy path because import.meta.url
+  // no longer identifies this source module after bundling.
+  const policyPath = fallbackPolicyPath ?? defaultPolicyPath();
   const raw = readFileSync(policyPath, 'utf-8');
   const data = JSON.parse(raw) as Record<string, unknown>;
   const policy = fromData(data, 'Unknown');
@@ -59,6 +66,6 @@ export function loadPolicyWithMetadata(cwd: string = process.cwd()): LoadedPolic
   return { policy, ref: policyRef(policy), source: { kind: 'default', path: policyPath } };
 }
 
-export function loadPolicy(cwd: string = process.cwd()): Policy {
-  return loadPolicyWithMetadata(cwd).policy;
+export function loadPolicy(cwd: string = process.cwd(), fallbackPolicyPath?: string): Policy {
+  return loadPolicyWithMetadata(cwd, fallbackPolicyPath).policy;
 }

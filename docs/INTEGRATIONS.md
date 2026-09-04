@@ -116,6 +116,33 @@ message. Adapters import the audit logic directly from this package's own
 `dist/` — no subprocess, no `HAWKEYE_BIN` — so an adapter and the audit logic
 it calls can never drift out of version sync.
 
+### VS Code Chat — `@oss-hawkeye`
+
+The extension under [`adapters/vscode/`](../adapters/vscode) registers the exact
+`@oss-hawkeye` participant and `/check`, `/scan`, `/explain`, `/fix`, `/policy`,
+and `/status` commands.
+
+```bash
+npm run package:vscode
+code --install-extension adapters/vscode/oss-hawkeye-vscode-0.1.0.vsix
+```
+
+```text
+@oss-hawkeye /check npm install axios@1.7.2
+@oss-hawkeye /status
+```
+
+The extension bundles the same Action Runtime, Decision Kernel, and Harness as
+the package. It contains no provider calls or verdict logic of its own. The
+latest `HawkeyeRunState` is stored in VS Code workspace state so status,
+explanation, and verified remediation survive reloads without depending on chat
+history.
+
+This is an interactive advisory surface, not an install interceptor. It never
+runs the displayed command, and uninstalling it does not change separately
+configured PreToolUse hooks or shell shims. Full installation and rollback
+steps are in [`docs/UAT-PR4.md`](UAT-PR4.md).
+
 ### Claude Code (PreToolUse hook) — recommended
 
 A [PreToolUse hook](https://docs.claude.com/en/docs/claude-code/hooks) runs

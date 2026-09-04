@@ -300,6 +300,25 @@ does not execute commands—normal Hawkeye enforcement remains authoritative.
 See [Agent Harness Architecture](docs/AGENT-HARNESS.md) and the
 [PR3 maintainer UAT](docs/UAT-PR3.md).
 
+### `@oss-hawkeye` in VS Code Chat
+
+The VS Code adapter exposes Hawkeye as an explicit chat participant while
+keeping security decisions in the same Runtime and Harness:
+
+```text
+@oss-hawkeye /check npm install axios@1.7.2
+@oss-hawkeye /status
+@oss-hawkeye /explain
+@oss-hawkeye /fix
+@oss-hawkeye /policy
+@oss-hawkeye /scan
+```
+
+`@oss-hawkeye` selects the security participant; slash commands select a
+specific operation. The participant never executes an install or creates an
+approval. Build a locally installable VSIX with `npm run package:vscode`, and
+see the [PR4 maintainer UAT](docs/UAT-PR4.md) for installation and rollback.
+
 Collection owns network and cache access. Evaluation is deterministic and
 side-effect free, so the same evidence can be replayed against a changed policy
 without asking upstream providers again.

@@ -26,6 +26,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Package VS Code extension
+        run: npm run package:vscode
+
       - name: Unit tests
         run: npm test
 
