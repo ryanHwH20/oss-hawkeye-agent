@@ -12,8 +12,20 @@ const root = process.cwd();
 addCheck('CLI build output exists', existsSync(resolve(root, 'dist', 'cli.js')), resolve(root, 'dist', 'cli.js'));
 addCheck('Core build output exists', existsSync(resolve(root, 'dist', 'checker.js')), resolve(root, 'dist', 'checker.js'));
 
-const skillPath = resolve(root, '.github', 'skills', 'hawkeye-agent', 'SKILL.md');
-addCheck('Skill file in auto-discovery path', existsSync(skillPath), skillPath);
+const skillPaths = [
+  ['Canonical Skill', resolve(root, 'skills', 'oss-hawkeye', 'SKILL.md')],
+  ['Codex Skill', resolve(root, '.agents', 'skills', 'oss-hawkeye', 'SKILL.md')],
+  ['Claude Code Skill', resolve(root, '.claude', 'skills', 'oss-hawkeye', 'SKILL.md')],
+  ['GitHub Copilot Skill', resolve(root, '.github', 'skills', 'oss-hawkeye', 'SKILL.md')],
+];
+for (const [name, path] of skillPaths) addCheck(`${name} exists`, existsSync(path), path);
+
+const integrationPaths = [
+  ['Codex MCP configuration', resolve(root, '.codex', 'config.toml')],
+  ['Claude Code MCP configuration', resolve(root, '.mcp.json')],
+  ['Compiled MCP launcher', resolve(root, 'adapters', 'mcp', 'launcher.mjs')],
+];
+for (const [name, path] of integrationPaths) addCheck(`${name} exists`, existsSync(path), path);
 
 const instructionsPath = resolve(root, '.github', 'copilot-instructions.md');
 addCheck('Always-on copilot instructions exist', existsSync(instructionsPath), instructionsPath);

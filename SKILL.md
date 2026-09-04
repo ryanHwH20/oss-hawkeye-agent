@@ -1,7 +1,8 @@
 # Skill Source of Truth
 
-Workspace auto-discovery skill is maintained at:
+The canonical cross-agent Hawkeye skill is maintained at:
 
-`.github/skills/hawkeye-agent/SKILL.md`
+`skills/oss-hawkeye/SKILL.md`
 
-Use that file as the single source of truth for all Hawkeye Skill SOP updates.
+Run `npm run sync:skills` after editing it. Platform discovery copies are
+generated for Codex, Claude Code, and GitHub Copilot and checked in CI.

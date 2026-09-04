@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "oss-hawkeye": {
+      "command": "node",
+      "args": ["${CLAUDE_PROJECT_DIR:-.}/adapters/mcp/launcher.mjs"]
+    }
+  }
+}
