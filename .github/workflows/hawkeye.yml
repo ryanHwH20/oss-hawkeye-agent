@@ -29,6 +29,9 @@ jobs:
       - name: Package VS Code extension
         run: npm run package:vscode
 
+      - name: Bundle MCP adapter
+        run: npm run build:mcp
+
       - name: Unit tests
         run: npm test
 

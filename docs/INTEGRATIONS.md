@@ -143,6 +143,33 @@ runs the displayed command, and uninstalling it does not change separately
 configured PreToolUse hooks or shell shims. Full installation and rollback
 steps are in [`docs/UAT-PR4.md`](UAT-PR4.md).
 
+### MCP — Codex, Claude Code, and other clients
+
+The optional local stdio server exposes the same canonical Runtime and Harness
+through three tools:
+
+- `hawkeye_check_action` assesses an exact proposed command;
+- `hawkeye_next_action` validates carried state and returns the deterministic
+  next action;
+- `hawkeye_submit_result` records an external result for the exact pending
+  action.
+
+```bash
+npm run build:mcp
+codex mcp add oss-hawkeye -- node "$(pwd)/adapters/mcp/launcher.mjs"
+claude mcp add --transport stdio --scope project oss-hawkeye -- node "$(pwd)/adapters/mcp/launcher.mjs"
+```
+
+The MCP adapter requires Node.js 20 or newer; the main CLI remains compatible
+with Node.js 18. The server is pinned to its startup workspace, accepts bounded
+strict-schema payloads, carries no hidden conversation state, and never runs a
+package manager. Platform-specific `$oss-hawkeye` or `/oss-hawkeye` shortcuts
+belong to separate Skill packages; MCP provides the common functionality they
+can call.
+
+See [`docs/UAT-PR5.md`](UAT-PR5.md) for automated seven-ecosystem verification,
+manual Codex and Claude Code setup, and rollback.
+
 ### Claude Code (PreToolUse hook) — recommended
 
 A [PreToolUse hook](https://docs.claude.com/en/docs/claude-code/hooks) runs
