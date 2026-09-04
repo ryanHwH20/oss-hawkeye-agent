@@ -65,20 +65,20 @@ npm run build
 
 ### 2. One-Time Developer Setup (Recommended)
 
-To make new Copilot sessions consistently use Hawkeye Skill + CLI SOP, complete this once per machine:
+To make Codex, Claude Code, and Copilot sessions consistently use the same
+Hawkeye workflow, complete this once per checkout:
 
 1. Build the project:
 
 ```bash
 npm install
-npm run build
+npm run build:mcp
 ```
 
-2. Keep workspace skill and instructions files in place:
-- `.github/skills/hawkeye-agent/SKILL.md`
-- `.github/copilot-instructions.md`
+2. Keep the committed project Skill and MCP configuration files in place.
+   Trust the repository and approve its MCP server when your host asks.
 
-3. Reload VS Code window.
+3. Restart the agent conversation so it discovers the project Skill.
 
 4. Run setup checks from project root:
 
@@ -87,7 +87,8 @@ npm run check:setup
 npm run check:smoke
 ```
 
-If both pass, new sessions should reliably trigger Hawkeye flow on install commands.
+If both pass, use `$oss-hawkeye` in Codex, `/oss-hawkeye` in Claude Code, or
+`@oss-hawkeye` in VS Code Copilot.
 
 ### 3. Single Package Audit (CLI)
 
@@ -332,13 +333,32 @@ specific operation. The participant never executes an install or creates an
 approval. Build a locally installable VSIX with `npm run package:vscode`, and
 see the [PR4 maintainer UAT](docs/UAT-PR4.md) for installation and rollback.
 
+### Native Skill in Codex and Claude Code
+
+The provider-neutral Skill in [`skills/oss-hawkeye/`](skills/oss-hawkeye)
+drives the same three-tool MCP workflow in both hosts:
+
+```text
+$oss-hawkeye check `pip install idna==3.7`  # Codex
+/oss-hawkeye check `cargo add itoa@1.0.11` # Claude Code
+```
+
+Codex discovers its project copy under `.agents/skills`; Claude Code discovers
+its copy under `.claude/skills`. Both connect to the same local MCP adapter, so
+the host changes but the decision, remediation, and fail-closed behavior do not.
+See the [PR6 maintainer UAT](docs/UAT-PR6.md).
+
 Collection owns network and cache access. Evaluation is deterministic and
 side-effect free, so the same evidence can be replayed against a changed policy
 without asking upstream providers again.
 
 ### 💬 Conversational UX & The Two-Step Guardrail
 
-Once connected, keep your workspace skill at [.github/skills/hawkeye-agent/SKILL.md](.github/skills/hawkeye-agent/SKILL.md). It teaches the assistant when and how to invoke Hawkeye; the LLM does not become the authority that declares a package safe.
+The canonical workspace Skill at
+[`skills/oss-hawkeye/SKILL.md`](skills/oss-hawkeye/SKILL.md) teaches each host
+when and how to invoke Hawkeye; the LLM does not become the authority that
+declares a package safe. Platform copies are generated with
+`npm run sync:skills` and checked in CI.
 
 ### Demo GIF (Question -> Integrated Report)
 
@@ -349,7 +369,10 @@ The demo below shows the signature experience: ask a question, get one integrate
 Hawkeye's primary interaction model is a **two-step conversational guardrail** built for real developer conversations:
 
 1. **Step 1: Intercept & Audit:** When you attempt to install a package or ask about it, Hawkeye intercepts the intent, runs the CLI audit flow, and returns a comprehensive security report. **It will not install the package yet.**
-2. **Step 2: Approve & Execute:** If the package is approved, simply repeat the command or tell Hawkeye to "go ahead." Hawkeye will recognize the package is safe and actually execute the installation.
+2. **Step 2: Act on the canonical result:** Only `SAFE` returns an allowed
+   action. `BLOCKED`, `UNKNOWN`, and `NOT_APPLICABLE` are never converted into
+   approval, and execution remains a separate host action subject to normal
+   enforcement.
 
 ### Why This Is the Signature Experience
 
@@ -366,10 +389,7 @@ Developer: Is lodash safe for our project?
 Hawkeye: [returns full integrated audit report]
 
 Developer: npm install lodash
-Hawkeye: Choose mode -> (1) Security report first (2) Direct install now
-
-Developer: 1
-Hawkeye: [returns full integrated audit report with policy verdict and remediation]
+Hawkeye: [checks the exact command and returns the policy verdict and next action]
 ```
 
 **You can ask Hawkeye to:**

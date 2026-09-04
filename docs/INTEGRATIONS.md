@@ -156,19 +156,35 @@ through three tools:
 
 ```bash
 npm run build:mcp
-codex mcp add oss-hawkeye -- node "$(pwd)/adapters/mcp/launcher.mjs"
-claude mcp add --transport stdio --scope project oss-hawkeye -- node "$(pwd)/adapters/mcp/launcher.mjs"
 ```
 
 The MCP adapter requires Node.js 20 or newer; the main CLI remains compatible
 with Node.js 18. The server is pinned to its startup workspace, accepts bounded
 strict-schema payloads, carries no hidden conversation state, and never runs a
-package manager. Platform-specific `$oss-hawkeye` or `/oss-hawkeye` shortcuts
-belong to separate Skill packages; MCP provides the common functionality they
-can call.
+package manager. Project-scoped MCP configuration is committed for Codex in
+`.codex/config.toml` and Claude Code in `.mcp.json`; users still control project
+trust and MCP approval in their host.
 
-See [`docs/UAT-PR5.md`](UAT-PR5.md) for automated seven-ecosystem verification,
-manual Codex and Claude Code setup, and rollback.
+### Native cross-agent Skill
+
+One provider-neutral Skill in [`skills/oss-hawkeye/`](../skills/oss-hawkeye)
+drives the MCP workflow. Run `npm run sync:skills` after editing it; CI ensures
+the Codex, Claude Code, and Copilot discovery copies remain byte-identical.
+
+Use the host's native syntax:
+
+```text
+$oss-hawkeye check `pip install idna==3.7`       # Codex
+/oss-hawkeye check `cargo add itoa@1.0.11`      # Claude Code
+@oss-hawkeye /check npm install is-number@7.0.0 # VS Code Copilot
+```
+
+The Skill cannot approve itself or turn `UNKNOWN` or `NOT_APPLICABLE` into
+`SAFE`. If the MCP adapter is unavailable, it reports the request as
+unverifiable instead of offering a direct-install bypass.
+
+See [`docs/UAT-PR6.md`](UAT-PR6.md) for automated seven-ecosystem verification,
+native invocation checks in all three hosts, failure behavior, and rollback.
 
 ### Claude Code (PreToolUse hook) — recommended
 

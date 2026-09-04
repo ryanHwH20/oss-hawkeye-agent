@@ -18,8 +18,10 @@
     "docs/AGENT-HARNESS.md",
     "docs/INTEGRATIONS.md",
     "docs/UAT-PR5.md",
+    "docs/UAT-PR6.md",
     "policy.json",
-    "SKILL.md"
+    "SKILL.md",
+    "skills"
   ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -42,7 +44,10 @@
     "uat:pr3": "npm run build && node scripts/uat-pr3.mjs",
     "uat:pr4": "npm run build && npm run build:vscode && node scripts/uat-pr4.mjs",
     "uat:pr5": "npm run build && npm run build:mcp && node scripts/uat-pr5.mjs",
-    "prepack": "npm run build && npm run build:mcp",
+    "uat:pr6": "npm run build && npm run build:mcp && npm run check:skills && node scripts/uat-pr6.mjs",
+    "sync:skills": "node scripts/sync-agent-skills.mjs",
+    "check:skills": "node scripts/sync-agent-skills.mjs --check",
+    "prepack": "npm run check:skills && npm run build && npm run build:mcp",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs",
     "eval:typosquat": "vitest run test/typosquat-eval.test.ts",
