@@ -5,9 +5,13 @@ import {
   checkPackage,
   checkPackages,
   collectPackageEvidence,
+  createRun,
   evaluatePackage,
+  HarnessError,
   loadPolicyWithMetadata,
+  nextAction,
   policyDigest,
+  submitResult,
 } from '../src/index.js';
 
 describe('public package API', () => {
@@ -20,5 +24,9 @@ describe('public package API', () => {
     expect(evaluatePackage).toBeTypeOf('function');
     expect(loadPolicyWithMetadata).toBeTypeOf('function');
     expect(policyDigest).toBeTypeOf('function');
+    expect(createRun).toBeTypeOf('function');
+    expect(nextAction).toBeTypeOf('function');
+    expect(submitResult).toBeTypeOf('function');
+    expect(HarnessError).toBeTypeOf('function');
   });
 });

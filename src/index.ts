@@ -32,3 +32,26 @@ export type { Finding, FindingEffect } from './core/finding.js';
 export type { ActionIntent, PackageCoordinate, ShellCommandIntent } from './core/intent.js';
 export type { PolicyRef } from './core/policy-ref.js';
 export type { RemediationAction, RemediationCandidate } from './core/remediation.js';
+
+// Deterministic, resumable Agent Harness workflow.
+export { createRun } from './harness/create-run.js';
+export type { CreateRunOptions } from './harness/create-run.js';
+export { HarnessError } from './harness/errors.js';
+export type { HarnessErrorCode } from './harness/errors.js';
+export { nextAction } from './harness/planner.js';
+export { submitResult } from './harness/reducer.js';
+export type {
+  ActionResult,
+  ApprovalRequestedResult,
+  AssessmentCompletedResult,
+  ExecutionCompletedResult,
+  RetryCompletedResult,
+  StoppedResult,
+} from './harness/result.js';
+export type {
+  ActionRecord,
+  ApprovalRecord,
+  HawkeyeRunPhase,
+  HawkeyeRunState,
+  RunError,
+} from './harness/state.js';
