@@ -52,7 +52,7 @@ async function safely(run: () => HawkeyeMcpOutput | Promise<HawkeyeMcpOutput>): 
 
 export function createHawkeyeMcpServer(service: HawkeyeMcpService): McpServer {
   const server = new McpServer(
-    { name: 'oss-hawkeye', version: '1.3.0' },
+    { name: 'oss-hawkeye', version: '1.4.0' },
     { instructions },
   );
 

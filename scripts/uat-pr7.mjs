@@ -27,6 +27,7 @@ const cache = join(temporaryRoot, 'npm-cache');
 const failures = [];
 const rows = [];
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const expectedVersion = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).version;
 let client;
 
 function accept(condition, message) {
@@ -70,6 +71,8 @@ try {
 
   const installed = join(consumer, 'node_modules', 'oss-hawkeye-agent');
   const installedPackage = JSON.parse(readFileSync(join(installed, 'package.json'), 'utf8'));
+  accept(installedPackage.version === expectedVersion,
+    `Installed package version ${installedPackage.version} does not match expected ${expectedVersion}.`);
   accept(installedPackage.bin?.hawkeye === 'dist/cli.js', 'Installed package has no hawkeye CLI bin entry.');
   accept(installedPackage.bin?.['hawkeye-mcp'] === 'adapters/mcp/launcher.mjs', 'Installed package has no hawkeye-mcp bin entry.');
   accept(existsSync(join(installed, 'adapters', 'claude-code.mjs')), 'Installed package has no Claude enforcement adapter.');
@@ -87,6 +90,8 @@ try {
   });
   client = new Client({ name: 'hawkeye-pr7-uat', version: '1.0.0' });
   await client.connect(transport);
+  accept(client.getServerVersion()?.version === expectedVersion,
+    `Installed MCP server version ${client.getServerVersion()?.version ?? 'missing'} does not match expected ${expectedVersion}.`);
   const { tools } = await client.listTools();
   accept(isDeepStrictEqual(tools.map(tool => tool.name), [
     'hawkeye_check_action',
