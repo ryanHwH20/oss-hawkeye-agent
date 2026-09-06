@@ -1,6 +1,6 @@
 {
   "name": "oss-hawkeye-agent",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Context-Aware Security Guardrail for Developers",
   "author": "ryanHwH20",
   "license": "Apache-2.0",
@@ -50,6 +50,7 @@
     "sync:skills": "node scripts/sync-agent-skills.mjs",
     "check:skills": "node scripts/sync-agent-skills.mjs --check",
     "check:package": "node scripts/check-package-contents.mjs",
+    "check:release-version": "node scripts/check-release-version.mjs",
     "prepack": "npm run check:skills && npm run build && npm run build:mcp",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs",

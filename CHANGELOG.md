@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-06
+
+Hawkeye now gives coding agents one stable way to participate in dependency
+security decisions without giving the model authority to create a verdict.
+CLI, enforcement adapters, VS Code Chat, MCP clients, and cross-agent Skills
+consume the same decision runtime and structured next actions.
+
+### Added
+
+- **Decision-first install plans (#77).** Multi-package checks now lead with one
+  actionable plan. Verified clean upgrades are consolidated into a copyable
+  install command, while packages without a safe path remain visibly blocked.
+- **Project baselines and PR notes (#78, #79).** Teams can fail CI only on new
+  risk and generate a review-ready explanation for dependency changes and
+  verified remediation.
+- **Canonical agent admission contract (#104).** `assessAction()` returns a
+  versioned `AdmissionDecision`, stable package coordinates, evidence
+  references, structured findings, policy identity, and the next legal action.
+- **Deterministic Decision Kernel (#106).** Evidence collection is separate
+  from side-effect-free policy evaluation. The same evidence and normalized
+  policy produce the same decision without another provider request.
+- **Resumable Agent Harness (#108).** JSON-serializable `HawkeyeRunState`,
+  `nextAction()`, and `submitResult()` support bounded retry, verified
+  remediation, human approval handoff, and deterministic resume without hidden
+  conversation state.
+- **VS Code `@oss-hawkeye` participant (#110).** `/check`, `/scan`, `/explain`,
+  `/fix`, `/policy`, and `/status` route into the canonical Runtime and Harness.
+  The extension stores workflow state locally and never executes an install.
+- **Vendor-neutral MCP adapter (#112).** The local stdio server exposes exactly
+  `hawkeye_check_action`, `hawkeye_next_action`, and `hawkeye_submit_result`.
+  Strict schemas, bounded payloads, workspace binding, and explicit caller-held
+  state keep the protocol portable and fail closed.
+- **Native cross-agent Skill (#114).** Codex uses `$oss-hawkeye`, Claude Code
+  uses `/oss-hawkeye`, and VS Code Copilot keeps `@oss-hawkeye`. One canonical
+  Skill drives the same MCP workflow, with generated copies checked for drift
+  in CI.
+
+### Security
+
+- `UNKNOWN` remains distinct from `SAFE`, and unsupported commands return
+  `NOT_APPLICABLE` instead of receiving an admission verdict.
+- Agents cannot change verdicts through state mutation, self-approve an
+  exception, or mark an unverified remediation executable.
+- Retryable evidence failures use a finite attempt budget. Exhaustion produces
+  `STOP` instead of an unbounded agent loop.
+- The old conversational “Direct install now” bypass was removed. Governed,
+  committed exceptions remain the supported risk-acceptance path.
+- Patched development transitive dependencies remove the known PostCSS and
+  Nanoid advisories present before release preparation (#115).
+
+### Changed
+
+- **Pluggable enforcement adapter (#100).** The Claude Code hook moved from
+  `hooks/claude-code-precheck.mjs` to `adapters/claude-code.mjs`. The adapter
+  now imports Hawkeye directly instead of spawning a separate CLI process, so
+  `HAWKEYE_BIN` no longer applies to this integration.
+- **Hardened npm distribution (#115).** CI and release automation assert the
+  tarball contains the CLI, public library, Claude adapter, MCP runtime,
+  canonical Skill, policy, and required documentation. A clean-consumer UAT
+  launches Hawkeye from the installed artifact across all seven ecosystems.
+
+### Compatibility
+
+- Existing CLI commands, scan output, CI integration, SARIF, daemon, baselines,
+  exceptions, telemetry, and enforcement behavior remain supported.
+- The core CLI and library support Node.js 18 or newer. The optional MCP adapter
+  requires Node.js 20 or newer.
+- VS Code extension packaging remains independently versioned at `0.1.0`; this
+  npm release does not publish an extension to VS Code Marketplace.
+
 ## [1.3.0] - 2026-07-01
 
 ### Added

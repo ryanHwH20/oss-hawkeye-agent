@@ -42,7 +42,8 @@ installs that local tarball with npm lifecycle scripts disabled. It then:
 
 1. validates both declared binary entrypoints;
 2. loads the installed CLI and checks its usage contract;
-3. launches MCP from `node_modules/oss-hawkeye-agent`;
+3. launches MCP from `node_modules/oss-hawkeye-agent` and checks its server
+   version matches the installed package;
 4. discovers exactly the three canonical Hawkeye tools;
 5. assesses NPM, PyPI, Cargo, Go, RubyGems, NuGet, and Maven;
 6. JSON-round-trips state and confirms deterministic replay;

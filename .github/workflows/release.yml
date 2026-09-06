@@ -22,6 +22,7 @@ jobs:
       # older one, so upgrade before publishing.
       - run: npm install -g npm@latest
       - run: npm ci
+      - run: npm run check:release-version -- "$GITHUB_REF_NAME"
       - run: npm run build
       - run: npm run build:mcp
       - run: npm run check:package
