@@ -19,6 +19,7 @@
     "docs/INTEGRATIONS.md",
     "docs/UAT-PR5.md",
     "docs/UAT-PR6.md",
+    "docs/UAT-PR7.md",
     "policy.json",
     "SKILL.md",
     "skills"
@@ -45,8 +46,10 @@
     "uat:pr4": "npm run build && npm run build:vscode && node scripts/uat-pr4.mjs",
     "uat:pr5": "npm run build && npm run build:mcp && node scripts/uat-pr5.mjs",
     "uat:pr6": "npm run build && npm run build:mcp && npm run check:skills && node scripts/uat-pr6.mjs",
+    "uat:pr7": "npm run build && npm run build:mcp && npm run check:skills && npm run check:package && node scripts/uat-pr7.mjs",
     "sync:skills": "node scripts/sync-agent-skills.mjs",
     "check:skills": "node scripts/sync-agent-skills.mjs --check",
+    "check:package": "node scripts/check-package-contents.mjs",
     "prepack": "npm run check:skills && npm run build && npm run build:mcp",
     "check:setup": "node scripts/check-setup.mjs",
     "check:smoke": "node scripts/smoke.mjs",

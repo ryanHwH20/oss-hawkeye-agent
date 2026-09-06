@@ -35,6 +35,9 @@ jobs:
       - name: Bundle MCP adapter
         run: npm run build:mcp
 
+      - name: Check npm package contents
+        run: npm run check:package
+
       - name: Unit tests
         run: npm test
 

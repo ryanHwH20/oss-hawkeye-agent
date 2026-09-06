@@ -23,6 +23,8 @@ jobs:
       - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run build
+      - run: npm run build:mcp
+      - run: npm run check:package
       - run: npm run check:setup
       - run: npm run check:smoke
       # No NODE_AUTH_TOKEN: npm authenticates via GitHub OIDC against the
