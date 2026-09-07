@@ -85,7 +85,8 @@ const checks = [
     expected: 'version, commit, integrity, provenance',
     passed: publishCommands.includes('${GITHUB_SHA}')
       && publishCommands.includes('${expected_integrity}')
-      && publishCommands.includes('https://slsa.dev/provenance/v1')
+      && publishCommands.includes('dist.attestations.provenance.predicateType')
+      && publishCommands.includes('test "${provenance}" = ')
       && publishCommands.includes('exit 1'),
   },
 ];
