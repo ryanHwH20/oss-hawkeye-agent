@@ -70,7 +70,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^26.4.0",
     "cvss": "^1.0.5",
     "semver": "^7.8.1",
     "spdx-expression-parse": "^4.0.0",
