@@ -24,16 +24,29 @@ Thank you for helping keep the open-source ecosystem secure!
 
 ## Supply-Chain Integrity
 
-Hawkeye is published to npm via **OIDC trusted publishing** from GitHub Actions — there is no long-lived npm token to leak. Each release carries **build provenance** (a signed [SLSA](https://slsa.dev) attestation linking the package back to the exact commit and workflow that built it).
+Hawkeye's automated npm release workflow uses **OIDC trusted publishing** from
+GitHub Actions, so the workflow does not require a long-lived npm publish token.
+Releases successfully published through that workflow carry **build provenance**:
+a signed [SLSA](https://slsa.dev) attestation linking the package to the source
+commit and release workflow.
+
+Version `1.4.0` is a documented exception. Its automated workflow stopped before
+publishing because an unpinned npm upgrade became incompatible with the release
+runner. The maintainer then published the already validated tarball manually.
+Its registry integrity and `gitHead` match the reviewed release commit, but the
+package does not carry a Hawkeye provenance attestation.
 
 Verify what you install:
 
 ```bash
-# Verify the published package's provenance and signatures
+# Verify registry signatures and any attestations in the dependency tree
 npm audit signatures
 
-# Or inspect a specific version's attestations
+# Confirm Hawkeye itself has a provenance attestation
 npm view oss-hawkeye-agent@latest dist.attestations
 ```
 
-A passing `npm audit signatures` confirms the package on npm was built by this repository's `release.yml` workflow and has not been tampered with.
+A passing `npm audit signatures` verifies registry signatures and available
+attestations, but its aggregate count may include Hawkeye's dependencies. To
+confirm that Hawkeye itself was published by the trusted workflow, the direct
+`dist.attestations` query above must contain a SLSA provenance entry.

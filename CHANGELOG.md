@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Isolated npm publishing from dependency installation and build scripts,
+  pinned the release toolchain, and made unit tests plus the installed-artifact
+  seven-ecosystem UAT mandatory before an OIDC-enabled publish (#118).
+
 ## [1.4.0] - 2026-09-06
 
 Hawkeye now gives coding agents one stable way to participate in dependency
@@ -330,7 +336,8 @@ performance, integrity, and measurement work. 151-test suite.
 - Policy-as-Code via `.audit-agent.yaml`.
 - In-memory caching layer with TTL for API responses.
 
-[Unreleased]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/ryanHwH20/oss-hawkeye-agent/compare/v1.0.2...v1.1.0

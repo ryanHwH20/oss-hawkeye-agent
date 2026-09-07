@@ -6,28 +6,146 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_NODE_VERSION: '24.15.0'
+  RELEASE_NPM_VERSION: '11.12.1'
 
 jobs:
-  publish-npm:
+  validate-and-pack:
+    name: Validate and pack release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - name: Checkout release source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Setup pinned release toolchain
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: ${{ env.RELEASE_NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Verify pinned release toolchain
+        shell: bash
+        run: |
+          test "$(node --version)" = "v${RELEASE_NODE_VERSION}"
+          test "$(npm --version)" = "${RELEASE_NPM_VERSION}"
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check release tag matches package version
+        run: npm run check:release-version -- "$GITHUB_REF_NAME"
+
+      - name: Build package
+        run: npm run build
+
+      - name: Bundle MCP adapter
+        run: npm run build:mcp
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Check npm package contents
+        run: npm run check:package
+
+      - name: Run setup checks
+        run: npm run check:setup
+
+      - name: Run smoke checks
+        run: npm run check:smoke
+
+      - name: Run installed-artifact UAT across all seven ecosystems
+        run: npm run uat:pr7
+
+      - name: Create release artifact and checksum
+        shell: bash
+        run: |
+          mkdir release-artifact
+          npm pack --json --ignore-scripts --pack-destination release-artifact > release-artifact/package-metadata.json
+          cd release-artifact
+          sha512sum -- *.tgz > SHA512SUMS
+
+      - name: Upload validated release artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-release-${{ github.ref_name }}
+          path: release-artifact/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-npm:
+    name: Publish validated artifact to npm
+    needs: validate-and-pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout release identity
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Setup pinned publishing toolchain
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ env.RELEASE_NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org/'
-      # OIDC trusted publishing needs a recent npm (>= 11.5.1). Node 20 ships an
-      # older one, so upgrade before publishing.
-      - run: npm install -g npm@latest
-      - run: npm ci
-      - run: npm run check:release-version -- "$GITHUB_REF_NAME"
-      - run: npm run build
-      - run: npm run build:mcp
-      - run: npm run check:package
-      - run: npm run check:setup
-      - run: npm run check:smoke
-      # No NODE_AUTH_TOKEN: npm authenticates via GitHub OIDC against the
-      # trusted publisher configured for this package, and emits provenance.
-      - run: npm publish --provenance --access public
+          package-manager-cache: false
+
+      - name: Verify pinned publishing toolchain
+        shell: bash
+        run: |
+          test "$(node --version)" = "v${RELEASE_NODE_VERSION}"
+          test "$(npm --version)" = "${RELEASE_NPM_VERSION}"
+
+      - name: Download validated release artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-release-${{ github.ref_name }}
+          path: release-artifact
+
+      - name: Verify release artifact checksum
+        working-directory: release-artifact
+        run: sha512sum --check SHA512SUMS
+
+      - name: Publish validated tarball with provenance
+        shell: bash
+        run: |
+          shopt -s nullglob
+          tarballs=(release-artifact/*.tgz)
+          test "${#tarballs[@]}" -eq 1
+          npm publish "${tarballs[0]}" --ignore-scripts --provenance --access public
+
+      - name: Verify published package and provenance
+        shell: bash
+        run: |
+          expected_version="${GITHUB_REF_NAME#v}"
+          expected_integrity="$(node -e "const [entry] = require('./release-artifact/package-metadata.json'); process.stdout.write(entry.integrity)")"
+          for attempt in 1 2 3 4 5 6; do
+            version="$(npm view "oss-hawkeye-agent@${expected_version}" version 2>/dev/null || true)"
+            git_head="$(npm view "oss-hawkeye-agent@${expected_version}" gitHead 2>/dev/null || true)"
+            integrity="$(npm view "oss-hawkeye-agent@${expected_version}" dist.integrity 2>/dev/null || true)"
+            provenance="$(npm view "oss-hawkeye-agent@${expected_version}" dist.attestations.provenance.predicateType 2>/dev/null || true)"
+            if test "${version}" = "${expected_version}" \
+              && test "${git_head}" = "${GITHUB_SHA}" \
+              && test "${integrity}" = "${expected_integrity}" \
+              && test "${provenance}" = "https://slsa.dev/provenance/v1"; then
+              echo "Verified oss-hawkeye-agent@${expected_version}, integrity, gitHead, and SLSA provenance."
+              exit 0
+            fi
+            echo "Registry verification attempt ${attempt}/6 is not complete yet."
+            sleep 10
+          done
+          echo "Published package verification failed closed." >&2
+          exit 1

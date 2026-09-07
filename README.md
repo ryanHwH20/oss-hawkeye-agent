@@ -458,6 +458,8 @@ Our strategy and positioning live in **[docs/VISION.md](docs/VISION.md)**; the l
 ## 🤝 Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Maintainers should follow the reviewed [release runbook](docs/RELEASING.md) for
+versioning, protected npm publishing, provenance verification, and recovery.
 
 ## 📄 License
 
