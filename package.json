@@ -47,6 +47,7 @@
     "uat:pr5": "npm run build && npm run build:mcp && node scripts/uat-pr5.mjs",
     "uat:pr6": "npm run build && npm run build:mcp && npm run check:skills && node scripts/uat-pr6.mjs",
     "uat:pr7": "npm run build && npm run build:mcp && npm run check:skills && npm run check:package && node scripts/uat-pr7.mjs",
+    "uat:pr8": "npm run uat:pr7 && vitest run test/release-workflow.test.ts test/release-version.test.ts && node scripts/uat-pr8.mjs",
     "sync:skills": "node scripts/sync-agent-skills.mjs",
     "check:skills": "node scripts/sync-agent-skills.mjs --check",
     "check:package": "node scripts/check-package-contents.mjs",
